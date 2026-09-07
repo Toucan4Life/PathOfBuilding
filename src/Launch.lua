@@ -18,6 +18,20 @@ SetMainObject(launch)
 jit.opt.start('maxtrace=4000','maxmcode=8192')
 collectgarbage("setpause", 400)
 
+function launch:StartEmmyDebugger()
+	if os.getenv("POB_EMMY_DEBUG") ~= "1" then
+		return
+	end
+	local debuggerPath = os.getenv("POB_EMMY_DEBUGGER_PATH")
+	if debuggerPath then
+		package.cpath = package.cpath .. ";" .. debuggerPath .. "\\?.dll"
+	else
+		package.cpath = package.cpath .. ";/usr/local/bin/?.so"
+	end
+	local dbg = require("emmy_core")
+	dbg.tcpListen("localhost", 9966)
+end
+
 function launch:OnInit()
 	self.devMode = false
 	self.installedMode = false
@@ -117,6 +131,14 @@ function launch:OnFrame()
 				end
 				self:ShowErrMsg("In 'OnFrame': %s", errMsg)
 			end
+		end
+	end
+	if self.main and self.main.uniqueDB and self.main.rareDB then
+		if self.main.uniqueDB.loading or self.main.rareDB.loading then
+		elseif not self.main.onFrameFuncs["FirstFrame"] and not self.startupReady then
+			self.startupReady = true
+			ConPrintf("Startup complete: %d ms", GetTime() - startTime)
+			self:StartEmmyDebugger()
 		end
 	end
 	self.devModeAlt = self.devMode and IsKeyDown("ALT")

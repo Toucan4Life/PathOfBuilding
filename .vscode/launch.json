@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "EmmyLua: Debug (9966)",
+      "type": "emmylua_new",
+      "request": "launch",
+      "host": "localhost",
+      "port": 9966,
+      "ideConnectDebugger": true,
+      "preLaunchTask": "Path of Building: Launch with EmmyLua",
+      "postDebugTask": "Path of Building: Stop"
+    }
+  ]
+}

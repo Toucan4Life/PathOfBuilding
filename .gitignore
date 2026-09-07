@@ -1,7 +1,6 @@
 # Development tools
 .idea/
 .vs/
-.vscode/
 *.code-workspace
 inspect.lua
 

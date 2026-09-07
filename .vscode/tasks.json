@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Path of Building: Launch with EmmyLua",
+      "type": "process",
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/.vscode/launch-pob-debug.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Launching Path of Building with Wine on",
+          "endsPattern": "^EmmyLua debug server is ready\\.$"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Path of Building: Stop",
+      "type": "process",
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/.vscode/launch-pob-debug.sh",
+        "--stop"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}

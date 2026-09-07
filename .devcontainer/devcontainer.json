@@ -1,0 +1,24 @@
+{
+  "name": "Path of Building",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "workspaceFolder": "/workspaces/pob",
+  "remoteUser": "root",
+  "overrideCommand": true,
+  "mounts": [
+    "source=${localEnv:XDG_RUNTIME_DIR}/${localEnv:WAYLAND_DISPLAY},target=/tmp/pob-wayland.sock,type=bind"
+  ],
+  "containerEnv": {
+    "XDG_RUNTIME_DIR": "/tmp",
+    "WAYLAND_DISPLAY": "pob-wayland.sock"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "tangzx.emmylua"
+      ]
+    }
+  }
+}
