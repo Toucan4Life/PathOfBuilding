@@ -55,7 +55,6 @@ end
 ---@field lineHeight? number
 ---@field defaultLineHeight? number
 ---@field allowZoom? boolean
----@field protected boolean
 ---@field blinkStart number
 ---@field lastUndoState? string
 local EditClass = newClass("EditControl", "ControlHost", "Control", "UndoHandler", "TooltipHost")

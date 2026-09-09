@@ -11,7 +11,6 @@ local t_insert = table.insert
 ---@field label string
 ---@field path string
 ---@field button ButtonControl
-
 ---@field basePath string
 ---@field baseName string
 ---@field subPath string

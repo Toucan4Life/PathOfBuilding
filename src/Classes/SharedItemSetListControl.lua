@@ -12,7 +12,6 @@ local s_format = string.format
 ---@class SharedItemSet
 ---@field title? string
 ---@field slots table<string, Item>
-
 ---@field itemsTab ItemsTab
 ---@field defaultText string
 ---@field selIndex? integer

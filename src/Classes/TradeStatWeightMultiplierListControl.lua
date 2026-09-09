@@ -14,7 +14,6 @@
 ---@field SliderLabel LabelControl
 ---@field Slider SliderControl
 ---@field SliderValue LabelControl
-
 ---@field indexController TradeStatWeightMultiplierIndexController
 ---@field noTooltip? boolean
 local TradeStatWeightMultiplierListControlClass = newClass("TradeStatWeightMultiplierListControl", "ListControl")

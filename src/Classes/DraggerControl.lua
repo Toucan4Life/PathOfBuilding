@@ -7,7 +7,6 @@
 ---@class CursorPosition
 ---@field X number
 ---@field Y number
-
 ---@field label Prop<string>
 ---@field onKeyDown? fun(position: CursorPosition)
 ---@field onKeyUp? fun(offset: CursorPosition)

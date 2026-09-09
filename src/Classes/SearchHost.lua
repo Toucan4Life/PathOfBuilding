@@ -12,7 +12,6 @@
 ---@class SearchInfo
 ---@field ranges SearchRange[]
 ---@field matches boolean
-
 ---@field searchListAccessor fun(): unknown[]?
 ---@field valueAccessor? fun(entry: unknown): string
 ---@field searchTerm string

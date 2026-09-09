@@ -11,7 +11,6 @@ local m_min = math.min
 ---@field minHeight number
 ---@field maxWidth number
 ---@field maxHeight number
----@field protected boolean
 local ResizableEditClass = newClass("ResizableEditControl", "EditControl")
 
 ---@param anchor? Anchor
