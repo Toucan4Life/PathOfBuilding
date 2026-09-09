@@ -21,8 +21,8 @@ local ItemDBClass = newClass("ItemDBControl", "ListControl")
 ---@class UniqueItemDBData: ItemDBData
 ---@field byTitle table<string, Item>
 
----@param anchor Anchor?
----@param rect Rect?
+---@param anchor? Anchor
+---@param rect? Rect
 ---@param itemsTab ItemsTab
 ---@param db ItemDBData
 ---@param dbType "RARE"|"UNIQUE"

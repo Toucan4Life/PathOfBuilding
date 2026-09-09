@@ -5,8 +5,8 @@
 --
 ---@class TooltipHost
 ---@field tooltip Tooltip
----@field tooltipText string?
----@field tooltipFunc? fun(tooltip: Tooltip, ...: any)
+---@field tooltipText? Prop<string>
+---@field tooltipFunc? fun(tooltip: Tooltip, ...: unknown)
 ---@field Object Control
 local TooltipHostClass = newClass("TooltipHost")
 

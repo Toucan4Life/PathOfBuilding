@@ -7,6 +7,16 @@ local ipairs = ipairs
 local t_insert = table.insert
 
 ---@class PathControl: Control, ControlHost, UndoHandler
+---@field basePath string
+---@field baseName string
+---@field subPath string
+---@field folderList PathFolder[]
+---@field onChange? fun(subPath: string)
+---@field otherDragSource? unknown
+---@class PathFolder
+---@field label string
+---@field path string
+---@field button ButtonControl
 local PathClass = newClass("PathControl", "Control", "ControlHost", "UndoHandler")
 
 function PathClass:PathControl(anchor, rect, basePath, subPath, onChange)
@@ -107,4 +117,3 @@ end
 function PathClass:RestoreUndoState(state)
 	self:SetSubPath(state, true)
 end
-

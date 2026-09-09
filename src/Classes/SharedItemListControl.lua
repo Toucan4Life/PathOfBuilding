@@ -8,6 +8,13 @@ local t_insert = table.insert
 local t_remove = table.remove
 
 ---@class SharedItemListControl: ListControl<Item>
+---@field itemsTab ItemsTab
+---@field defaultText string
+---@field dragTargetList ListControl[]
+---@field label string
+---@field selDragging? boolean
+---@field selIndex? integer
+---@field selValue? Item
 local SharedItemListClass = newClass("SharedItemListControl", "ListControl")
 
 ---@param anchor Anchor?

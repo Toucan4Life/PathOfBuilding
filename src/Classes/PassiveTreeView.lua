@@ -28,6 +28,41 @@ end
 ---@class PassiveTreeView
 ---@field zoomX number
 ---@field zoomY number
+---@field ring ImageHandle
+---@field highlightRing ImageHandle
+---@field jewelShadedOuterRing ImageHandle
+---@field jewelShadedOuterRingFlipped ImageHandle
+---@field jewelShadedInnerRing ImageHandle
+---@field jewelShadedInnerRingFlipped ImageHandle
+---@field eternal1 ImageHandle
+---@field eternal2 ImageHandle
+---@field karui1 ImageHandle
+---@field karui2 ImageHandle
+---@field maraketh1 ImageHandle
+---@field maraketh2 ImageHandle
+---@field templar1 ImageHandle
+---@field templar2 ImageHandle
+---@field vaal1 ImageHandle
+---@field vaal2 ImageHandle
+---@field kalguur1 ImageHandle
+---@field kalguur2 ImageHandle
+---@field zoom number
+---@field zoomLevel number
+---@field dragging boolean
+---@field dragY number
+---@field hoverNode? Node
+---@field compareSpec? PassiveSpec
+---@field tooltip Tooltip
+---@field skillTooltip Tooltip
+---@field searchStr string
+---@field searchStrSaved string
+---@field searchStrCached string
+---@field searchParams string[]
+---@field searchStrResults table<integer, boolean>
+---@field showHeatMap boolean
+---@field showStatDifferences boolean
+---@field traceMode boolean
+---@field tracePath? Node[]
 local PassiveTreeViewClass = newClass("PassiveTreeView")
 
 function PassiveTreeViewClass:PassiveTreeView()

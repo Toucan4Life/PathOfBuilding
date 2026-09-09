@@ -20,6 +20,13 @@ local bor = bit.bor
 ---@field nodes table<integer, Node>
 ---@field allocNodes table<integer, Node>
 ---@field jewel_data table<integer, table>
+---@field allocSubgraphNodes table<integer, Node>
+---@field allocExtendedNodes table<integer, Node>
+---@field jewels table<integer, Item>
+---@field subGraphs table<integer, table>
+---@field masterySelections table<integer, integer>
+---@field hashOverrides table<integer, Node>
+---@field splitPersonalityPath table<integer, boolean>
 local PassiveSpecClass = newClass("PassiveSpec", "UndoHandler")
 
 ---@param build Build

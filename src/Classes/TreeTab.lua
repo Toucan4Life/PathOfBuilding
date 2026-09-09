@@ -19,10 +19,77 @@ local s_gsub = string.gsub
 local s_byte = string.byte
 local dkjson = require "dkjson"
 
----@class TreeTab: ControlHost
-local TreeTabClass = newClass("TreeTab", "ControlHost")
+---@class TreeVersionOption
+---@field label string
+---@field value string
 
+---@class TattooModGroup
+---@field label string
+---@field descriptions string[]
+---@field id string
+
+---@class PowerReportEntry
+---@field name string
+---@field power number
+---@field powerStr string
+---@field pathPower number
+---@field pathPowerStr string
+---@field allocated boolean
+---@field id integer
+---@field x number
+---@field y number
+---@field type string
+---@field sd string[]
+---@field pathDist integer|string
+
+---@class TimelessJewelSocketOption
+---@field label string
+---@field keystone string
+---@field id integer
+
+---@class TimelessDesiredNode
+---@field nodeWeight number
+---@field nodeWeight2 number
+---@field displayName string
+---@field desiredIdx integer
+
+---@class TimelessSeedNodeResult
+---@field targetNodeNames string[]
+---@field totalWeight number
+---@field [integer] integer
+
+---@class TimelessSocketResult
+---@field resultNodes table<integer, table<string, TimelessSeedNodeResult>?>
+---@field seedWeights table<integer, number>
+---@field desiredNodes table<string, TimelessDesiredNode>
+---@field socketInfo TimelessJewelSocketOption
+
+---@class TreeTab: ControlHost
+---@field build Build
+---@field modFlag boolean
+---@field viewer PassiveTreeView
+---@field isComparing boolean
+---@field isCustomMaxDepth boolean
+---@field specList PassiveSpec[]
+---@field activeSpec integer
+---@field activeCompareSpec integer
+---@field compareSpec PassiveSpec
+---@field anchorControls Control
+---@field treeVersions TreeVersionOption[]
+---@field tradeLeaguesList table<string, string[]>
+---@field defaultTattoo table<string, integer>
+---@field powerStatList PowerStat[]
+---@field powerBuilderToastId? number
+---@field lastProgressToastUpdate number
+---@field jumpToNode boolean
+---@field jumpToX number
+---@field jumpToY number
+---@field showLegacyTattoo boolean
+---@field allocatedNodesInRadiusCount integer
+---@field [string] unknown
+local TreeTabClass = newClass("TreeTab", "ControlHost")
 ---@param build Build
+---@return TreeTab
 function TreeTabClass:TreeTab(build)
 	self:ControlHost()
 
@@ -327,12 +394,15 @@ function TreeTabClass:TreeTab(build)
 	self.controls.specConvertText.shown = function()
 		return self.showConvert
 	end
+	---@return string
 	local function getLatestTreeVersion()
 		return latestTreeVersion .. (self.specList[self.activeSpec].treeVersion:match("^" .. latestTreeVersion .. "(.*)") or "")
 	end
+	---@return string
 	local function buildConvertButtonLabel()
 		return colorCodes.POSITIVE.."Convert to "..treeVersions[getLatestTreeVersion()].display
 	end
+	---@return string
 	local function buildConvertAllButtonLabel()
 		return colorCodes.POSITIVE.."Convert all trees to "..treeVersions[getLatestTreeVersion()].display
 	end
@@ -347,7 +417,7 @@ function TreeTabClass:TreeTab(build)
 	self.jumpToY = 0
 	return self
 end
-
+---@param node Node
 function TreeTabClass:RemoveTattooFromNode(node)
 	self.build.spec.tree.nodes[node.id].isTattoo = false
 	self.build.spec.hashOverrides[node.id] = nil
@@ -355,7 +425,8 @@ function TreeTabClass:RemoveTattooFromNode(node)
 	node.allMasteryOptions = false
 	self.build.spec:BuildAllDependsAndPaths()
 end
-
+---@param viewPort Rect
+---@param inputEvents InputEvent[]
 function TreeTabClass:Draw(viewPort, inputEvents)
 	self.anchorControls.x = viewPort.x + 4
 	self.anchorControls.y = viewPort.y + viewPort.height - 24
@@ -488,7 +559,7 @@ function TreeTabClass:Draw(viewPort, inputEvents)
 
 	self:DrawControls(viewPort)
 end
-
+---@return string[]
 function TreeTabClass:GetSpecList()
 	local newSpecList = { }
 	for _, spec in ipairs(self.specList) do
@@ -496,7 +567,9 @@ function TreeTabClass:GetSpecList()
 	end
 	return newSpecList
 end
-
+---@param xml table
+---@param dbFileName string
+---@return boolean?
 function TreeTabClass:Load(xml, dbFileName)
 	self.specList = { }
 	if xml.elem == "Spec" then
@@ -532,7 +605,7 @@ function TreeTabClass:PostLoad()
 	end
 	self.build.itemsTab:PopulateSlots()
 end
-
+---@param xml table
 function TreeTabClass:Save(xml)
 	xml.attrib = {
 		activeSpec = tostring(self.activeSpec)
@@ -545,7 +618,7 @@ function TreeTabClass:Save(xml)
 		t_insert(xml, child)
 	end
 end
-
+---@param specId integer
 function TreeTabClass:SetActiveSpec(specId)
 	local prevSpec = self.build.spec
 	self.activeSpec = m_min(specId, #self.specList)
@@ -583,14 +656,17 @@ function TreeTabClass:SetActiveSpec(specId)
 	end
 	self.build:SyncLoadouts()
 end
-
+---@param specId integer
 function TreeTabClass:SetCompareSpec(specId)
 	self.activeCompareSpec = m_min(specId, #self.specList)
 	local curSpec = self.specList[self.activeCompareSpec]
 
 	self.compareSpec = curSpec
 end
-
+---@param version string
+---@param remove boolean
+---@param success boolean
+---@param ignoreTreeSubType? boolean
 function TreeTabClass:ConvertToVersion(version, remove, success, ignoreTreeSubType)
 	local treeSubTypeCapture = self.build.spec.treeVersion:match("(_%l+_?%l*)")
 	if not ignoreTreeSubType and treeSubTypeCapture and not version:match(treeSubTypeCapture) then
@@ -616,7 +692,7 @@ function TreeTabClass:ConvertToVersion(version, remove, success, ignoreTreeSubTy
 		main:OpenMessagePopup("Tree Converted", "The tree has been converted to "..treeVersions[version].display..".\nNote that some or all of the passives may have been de-allocated due to changes in the tree.\n\nYou can switch back to the old tree using the tree selector at the bottom left.")
 	end
 end
-
+---@param version string
 function TreeTabClass:ConvertAllToVersion(version)
 	local currActiveSpec = self.activeSpec
 	local specVersionList = { }
@@ -651,7 +727,8 @@ function TreeTabClass:OpenSpecManagePopup()
 		end),
 	})
 end
-
+---@param version string
+---@param ignoreTreeSubType? boolean
 function TreeTabClass:OpenVersionConvertPopup(version, ignoreTreeSubType)
 	local controls = { }
 	controls.warningLabel = new("LabelControl"):LabelControl(nil, {0, 20, 0, 16}, "^7Warning: some or all of the passives may be de-allocated due to changes in the tree.\n\n" ..
@@ -670,7 +747,7 @@ function TreeTabClass:OpenVersionConvertPopup(version, ignoreTreeSubType)
 	end)
 	main:OpenPopup(570, 140, "Convert to Version "..treeVersions[version].display, controls, "convert", "edit")
 end
-
+---@param version string
 function TreeTabClass:OpenVersionConvertAllPopup(version)
 	local controls = { }
 	controls.warningLabel = new("LabelControl"):LabelControl(nil, {0, 20, 0, 16}, "^7Warning: some or all of the passives may be de-allocated due to changes in the tree.\n\n" ..
@@ -688,6 +765,7 @@ end
 function TreeTabClass:OpenImportPopup()
 	local versionLookup = "tree/([0-9]+)%.([0-9]+)%.([0-9]+)/"
 	local controls = { }
+	---@param treeLink string
 	local function decodePoePlannerTreeLink(treeLink)
 		-- treeVersion is not known at this point. We need to decode the URL to get it.
 		local tmpSpec = new("PassiveSpec"):PassiveSpec(self.build, latestTreeVersion)
@@ -710,7 +788,8 @@ function TreeTabClass:OpenImportPopup()
 		self.build.buildFlag = true
 		main:ClosePopup()
 	end
-
+	---@param treeLink string
+	---@param newTreeVersion string
 	local function decodeTreeLink(treeLink, newTreeVersion)
 		-- newTreeVersion is passed in as an output of validateTreeVersion(). It will always be a valid tree version text string
 		-- 20230908. We always create a new Spec()
@@ -730,6 +809,10 @@ function TreeTabClass:OpenImportPopup()
 			main:ClosePopup()
 		end
 	end
+	---@param alternateType? string
+	---@param major? string
+	---@param minor? string
+	---@return string
 	local function validateTreeVersion(alternateType, major, minor)
 		-- Take the Major and Minor version numbers and confirm it is a valid tree version. The point release is also passed in but it is not used
 		-- Return: the passed in tree version as text or latestTreeVersion
@@ -843,12 +926,13 @@ function TreeTabClass:OpenExportPopup()
 	end)
 	popup = main:OpenPopup(380, 100, "Export Tree", controls, "done", "edit")
 end
-
+---@param selectedNode Node
 function TreeTabClass:ModifyNodePopup(selectedNode)
 	local controls = { }
 	local modGroups = { }
 	local treeNodes = self.build.spec.tree.nodes
 	local nodeName = treeNodes[selectedNode.id].dn
+	---@param selectedNode Node
 	local function buildMods(selectedNode)
 		wipeTable(modGroups)
 		local numLinkedNodes = selectedNode.linkedId and #selectedNode.linkedId or 0
@@ -882,6 +966,7 @@ function TreeTabClass:ModifyNodePopup(selectedNode)
 		end
 		table.sort(modGroups, function(a, b) return a.label < b.label end)
 		end
+	---@param selectedNode Node
 	local function addModifier(selectedNode)
 		local newTattooNode = self.build.spec.tree.tattoo.nodes[modGroups[controls.modSelect.selIndex].id]
 		newTattooNode.id = selectedNode.id
@@ -892,7 +977,7 @@ function TreeTabClass:ModifyNodePopup(selectedNode)
 		end
 		self.build.spec:BuildAllDependsAndPaths()
 	end
-
+	---@param modGroup TattooModGroup
 	local function constructUI(modGroup)
 		local totalHeight = 43
 		local maxWidth = 375
@@ -951,7 +1036,8 @@ function TreeTabClass:ModifyNodePopup(selectedNode)
 	controls.close = new("ButtonControl"):ButtonControl(nil, {90, 75, 80, 20}, "Cancel", function()
 		main:ClosePopup()
 	end)
-
+	---@param tooltip? Tooltip
+	---@return integer|string
 	local function getTattooCount(tooltip)
 		if tooltip then
 			tooltip:Clear()
@@ -997,7 +1083,8 @@ function TreeTabClass:ModifyNodePopup(selectedNode)
 	end)
 	controls.showLegacyTattoo.state = self.showLegacyTattoo
 end
-
+---@param node Node
+---@param listControl PassiveMasteryControl
 function TreeTabClass:SaveMasteryPopup(node, listControl)
 		if listControl.selValue == nil then
 			return
@@ -1016,7 +1103,8 @@ function TreeTabClass:SaveMasteryPopup(node, listControl)
 		self.build.buildFlag = true
 		main:ClosePopup()
 end
-
+---@param node Node
+---@param viewPort Rect
 function TreeTabClass:OpenMasteryPopup(node, viewPort)
 	local controls = { }
 	local effects = { }
@@ -1043,7 +1131,7 @@ function TreeTabClass:OpenMasteryPopup(node, viewPort)
 		main:OpenPopup(controls.effect.width + 12, controls.effect.height + 60, node.name, controls, nil, nil, "close")
 	end
 end
-
+---@param powerStat PowerStat
 function TreeTabClass:SetPowerCalc(powerStat)
 	self.viewer.showHeatMap = true
 	self.build.buildFlag = true
@@ -1057,7 +1145,8 @@ function TreeTabClass:SetPowerCalc(powerStat)
 		self.powerBuilderToastId = nil
 	end
 end
-
+---@param currentStat PowerStat?
+---@return PowerReportEntry[]
 function TreeTabClass:BuildPowerReportList(currentStat)
 	local report = {}
 
@@ -1087,6 +1176,8 @@ function TreeTabClass:BuildPowerReportList(currentStat)
 		}
 	end
 	local powerMultiplier = (displayStat.pc or displayStat.mod) and 100 or 1
+	---@param power number
+	---@return string
 	local function formatPower(power)
 		local powerStr = formatNumSep(s_format("%"..displayStat.fmt, power))
 		if (power > 0 and not displayStat.lowerIsBetter) or (power < 0 and displayStat.lowerIsBetter) then
@@ -1096,12 +1187,22 @@ function TreeTabClass:BuildPowerReportList(currentStat)
 		end
 		return powerStr
 	end
+	---@param node Node
+	---@param isAlloc boolean
+	---@return integer
 	local function getNodePathDist(node, isAlloc)
 		if isAlloc then
 			return #(node.depends or { }) == 0 and 1 or #node.depends
 		end
 		return node.power.distance or #(node.path or {}) == 0 and 1 or #node.path
 	end
+	---@param node Node
+	---@param name string
+	---@param nodePower number
+	---@param pathPower number
+	---@param pathDist integer|string
+	---@param isAlloc boolean
+	---@param pathPowerStr? string
 	local function addReportEntry(node, name, nodePower, pathPower, pathDist, isAlloc, pathPowerStr)
 		t_insert(report, {
 			name = name,
@@ -1410,7 +1511,7 @@ function TreeTabClass:FindTimelessJewel()
 			modData[#modData + 1] = smallModData[i]
 		end
 	end
-
+	---@return table<integer, number|string>
 	local function getNodeWeights()
 		local nodeWeights = {
 			[1] = controls.nodeSliderValue.label:sub(3):lower(),
@@ -1427,6 +1528,8 @@ function TreeTabClass:FindTimelessJewel()
 
 	local searchListTbl = { }
 	local searchListFallbackTbl = { }
+	---@param mode integer
+	---@param fallback boolean
 	local function parseSearchList(mode, fallback)
 		if mode == 0 then
 			if fallback then
@@ -1502,6 +1605,8 @@ function TreeTabClass:FindTimelessJewel()
 	end
 	parseSearchList(0, false) -- initial load: [timelessData.searchList => searchListTbl]
 	parseSearchList(0, true)  -- initial load: [timelessData.searchListFallback => searchListFallbackTbl]
+	---@param text string
+	---@param fallback boolean
 	local function updateSearchList(text, fallback)
 		if fallback then
 			timelessData.searchListFallback = text
@@ -1534,7 +1639,7 @@ function TreeTabClass:FindTimelessJewel()
 	local protectedNodesCount = 0
 	local setAllocatedNodes
 	self.allocatedNodesInRadiusCount = 0
-
+	---@param nodes? { label: string, node: Node }[]
 	local function buildNodeOptionCheckboxes(nodes)
 		local i = 1
 		protectedNodes = {}
@@ -1847,7 +1952,7 @@ function TreeTabClass:FindTimelessJewel()
 		return controls.nodeSlider3.tooltip.realDraw(self, x, y, width, height, viewPort)
 	end
 	controls.nodeSlider3:SetVal(0)
-
+	---@param sliderData table<integer, string|number>
 	local function updateSliders(sliderData)
 		if sliderData[2] == "required" then
 			controls.nodeSlider.val = 1
@@ -1875,6 +1980,10 @@ function TreeTabClass:FindTimelessJewel()
 	end
 
 	buildMods()
+	---@param legionPassive Node
+	---@return integer statCount
+	---@return string primaryLabel
+	---@return string secondaryLabel
 	local function getLegionStatLabels(legionPassive)
 		local statCount = timelessData.jewelType.id >= 7 and #legionPassive.sortedStats or #legionPassive.sd
 		if statCount > #legionPassive.sd then
@@ -1948,7 +2057,9 @@ function TreeTabClass:FindTimelessJewel()
 			end
 		end
 	end
-
+	---@param nodes table[]
+	---@param powerStat PowerStat
+	---@return { id: string, weight1?: number, weight2?: number, weight3?: number }[]
 	local function generateFallbackWeights(nodes, powerStat)
 		local calcFunc, calcBase = self.build.calcsTab:GetMiscCalculator(self.build)
 		local newList = { }
@@ -1996,6 +2107,8 @@ function TreeTabClass:FindTimelessJewel()
 			end
 			return statToFix -- if it doesn't need to be changed
 		end
+		---@param legionPassive Node
+		---@return { modList: Mod[]?, divisor: integer }[]
 		local function buildStatModLists(legionPassive)
 			-- Give each stat its own mod list even when several stats share one display line.
 			local modLists = { }
@@ -2439,6 +2552,9 @@ function TreeTabClass:FindTimelessJewel()
 		{ -labelSpacing, 0, 0, labelHeight }, "^7Search Maximum Amount:")
 
 	-- Helper function to search a single socket
+	---@param socketId integer
+	---@param socketInfo TimelessJewelSocketOption
+	---@return TimelessSocketResult?
 	local function searchSingleSocket(socketId, socketInfo)
 		if not treeData.nodes[socketId] or not treeData.nodes[socketId].isJewelSocket then
 			return nil
@@ -2727,7 +2843,8 @@ function TreeTabClass:FindTimelessJewel()
 			socketInfo = socketInfo
 		}
 	end
-
+	---@param input number
+	---@return string
 	local function formatSearchValue(input)
 		local   matchPattern1 = " 0"
 		local replacePattern1 = "   "
@@ -2743,7 +2860,11 @@ function TreeTabClass:FindTimelessJewel()
 		:gsub(matchPattern3, replacePattern3)
 		:gsub(matchPattern4, replacePattern4)
 	end
-
+	---@param resultNodes table<integer, table<string, TimelessSeedNodeResult>?>
+	---@param seedWeights table<integer, number>
+	---@param desiredNodes table<string, TimelessDesiredNode>
+	---@param socketInfo TimelessJewelSocketOption?
+	---@return table[]
 	local function formatResults(resultNodes, seedWeights, desiredNodes, socketInfo)
 		local results = { }
 		for seedMatch, seedData in pairs(resultNodes) do

@@ -885,6 +885,8 @@ function ImportTabClass:DownloadItems(realm)
 		end)
 end
 function ImportTabClass:DownloadSiteCharacterList(realm)
+	---@param league string
+	---@return string
 	local function FindMatchingStandardLeague(league)
 		-- Find a Standard league name for a given league name
 		-- Reference https://api.pathofexile.com/league?realm=pc

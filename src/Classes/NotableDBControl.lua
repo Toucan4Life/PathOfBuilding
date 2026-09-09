@@ -19,6 +19,19 @@ local function IsAnointableNode(node)
 end
 
 ---@class NotableDBControl : ListControl<table>
+---@field itemsTab ItemsTab
+---@field db table<integer, Node>
+---@field dbType string
+---@field dragTargetList ListControl[]
+---@field sortControl table<string, table>
+---@field sortDropList table[]
+---@field sortMode string
+---@field sortOrder table[]
+---@field sortMaxPower number
+---@field sortDetail? PowerStat|table
+---@field listBuildFlag boolean
+---@field listBuilder? thread
+---@field listOutputRevision? integer
 local NotableDBClass = newClass("NotableDBControl", "ListControl")
 
 ---@param itemsTab ItemsTab

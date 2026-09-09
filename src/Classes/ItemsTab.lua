@@ -88,6 +88,10 @@ end
 ---@class ItemsTab: UndoHandler, ControlHost, Control
 ---@field displayItem Item?
 ---@field items table<integer, Item>
+---@field displayItemTooltip Tooltip
+---@field anchorDisplayItem Control
+---@field showStatDifferences boolean
+---@field [string] unknown
 local ItemsTabClass = newClass("ItemsTab", "UndoHandler", "ControlHost", "Control")
 
 ---@param build Build
