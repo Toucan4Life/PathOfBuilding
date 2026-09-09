@@ -20,14 +20,14 @@ local JEWEL_RADIUS_TINT_COMPARE_ONLY = { 0, 1, 0, 0.7 }
 
 local gemTooltip = require("Classes.GemTooltip")
 
+---@param node Node
+---@return string?
 local function isAbyssConquered(node)
 	local conqueror = node and node.conqueredBy and node.conqueredBy.conqueror
 	return conqueror and conqueror.type and conqueror.type:match("^abyss_")
 end
 
 ---@class PassiveTreeView
----@field zoomX number
----@field zoomY number
 ---@field ring ImageHandle
 ---@field highlightRing ImageHandle
 ---@field jewelShadedOuterRing ImageHandle
@@ -48,6 +48,8 @@ end
 ---@field kalguur2 ImageHandle
 ---@field zoom number
 ---@field zoomLevel number
+---@field zoomX number
+---@field zoomY number
 ---@field dragging boolean
 ---@field dragY number
 ---@field hoverNode? Node
@@ -65,6 +67,7 @@ end
 ---@field tracePath? Node[]
 local PassiveTreeViewClass = newClass("PassiveTreeView")
 
+---@return PassiveTreeView
 function PassiveTreeViewClass:PassiveTreeView()
 	self.ring = NewImageHandle()
 	self.ring:Load("Assets/ring.png", "CLAMP")
@@ -123,6 +126,8 @@ function PassiveTreeViewClass:PassiveTreeView()
 	return self
 end
 
+---@param xml table
+---@param fileName string
 function PassiveTreeViewClass:Load(xml, fileName)
 	if xml.attrib.zoomLevel then
 		self.zoomLevel = tonumber(xml.attrib.zoomLevel)
@@ -141,6 +146,7 @@ function PassiveTreeViewClass:Load(xml, fileName)
 	end
 end
 
+---@param xml table
 function PassiveTreeViewClass:Save(xml)
 	self.searchStrSaved = self.searchStr
 	xml.attrib = {
@@ -154,6 +160,8 @@ end
 
 -- Look up the jewel item socketed at a given node ID in a compare spec.
 -- Uses itemsTab.sockets (the slot controls) which stay in sync with the active item/tree set.
+---@param nodeId integer
+---@return Item?
 function PassiveTreeViewClass:GetCompareJewel(nodeId)
 	if not self.compareSpec then return nil end
 	local cBuild = self.compareSpec.build
@@ -167,6 +175,9 @@ function PassiveTreeViewClass:GetCompareJewel(nodeId)
 end
 
 -- Returns the overlay asset name for a socketed jewel, or nil if no special overlay applies.
+---@param jewel Item
+---@param isExpansion? boolean
+---@return string?
 function PassiveTreeViewClass:GetJewelSocketOverlay(jewel, isExpansion)
 	if jewel.baseName == "Crimson Jewel" then
 		return isExpansion and "JewelSocketActiveRedAlt" or "JewelSocketActiveRed"
@@ -197,6 +208,9 @@ function PassiveTreeViewClass:GetJewelSocketOverlay(jewel, isExpansion)
 	end
 end
 
+---@param a Item?
+---@param b Item?
+---@return boolean
 local function compareJewelsEqual(a, b)
 	if not a or not b then
 		return a == b
@@ -207,10 +221,13 @@ end
 -- Returns the draw color for a node when compare overlay is active.
 -- Handles diff coloring for allocated/unallocated, mastery changes, and jewel socket differences.
 ---@param node Node
----@param compareNode Node
+---@param compareNode? Node
 ---@param spec PassiveSpec
 ---@param build Build
----@param nodeDefaultColor any
+---@param nodeDefaultColor string
+---@return string|number
+---@return number?
+---@return number?
 function PassiveTreeViewClass:GetCompareNodeColor(node, compareNode, spec, build, nodeDefaultColor)
 	if not compareNode then
 		return nodeDefaultColor
@@ -233,6 +250,8 @@ function PassiveTreeViewClass:GetCompareNodeColor(node, compareNode, spec, build
 end
 
 ---@param build Build
+---@param viewPort Rect
+---@param inputEvents InputEvent[]
 function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 	local spec = build.spec
 	local tree = spec.tree
@@ -320,10 +339,19 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 	local scale = m_min(viewPort.width, viewPort.height) / tree.size * self.zoom
 	local offsetX = self.zoomX + viewPort.x + viewPort.width/2
 	local offsetY = self.zoomY + viewPort.y + viewPort.height/2
+	---@param x number
+	---@param y number
+	---@return number
+	---@return number
 	local function treeToScreen(x, y)
 		return x * scale + offsetX,
 				y * scale + offsetY
 	end
+
+	---@param x number
+	---@param y number
+	---@return number
+	---@return number
 	local function screenToTree(x, y)
 		return (x - offsetX) / scale,
 				(y - offsetY) / scale
@@ -614,6 +642,8 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 		self:DrawAsset(tree.assets.BackgroundDexInt, scrX, scrY, scale)
 	end
 
+	---@param group PassiveTreeGroup
+	---@param isExpansion boolean
 	local function renderGroup(group, isExpansion)
 		local scrX, scrY = treeToScreen(group.x, group.y)
 		if group.ascendancyName then
@@ -706,9 +736,16 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 	end
 
 	local connectorColor = { 1, 1, 1 }
+	---@param r number
+	---@param g number
+	---@param b number
 	local function setConnectorColor(r, g, b)
 		connectorColor[1], connectorColor[2], connectorColor[3] = r, g, b
 	end
+
+	---@param n1 Node
+	---@param n2 Node
+	---@return string
 	local function getState(n1, n2)
 		-- Determine the connector state
 		local state = "Normal"
@@ -721,6 +758,8 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 		end
 		return state
 	end
+
+	---@param connector table
 	local function renderConnector(connector)
 		local node1, node2 = spec.nodes[connector.nodeId1], spec.nodes[connector.nodeId2]
 		local connectorDefaultColor = "^xFFFFFF"
@@ -829,6 +868,8 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 	if self.searchStrCached ~= self.searchStr then
 		self.searchStrCached = self.searchStr
 
+		---@param search string
+		---@return string[]
 		local function prepSearch(search)
 			search = search:lower()
 			--gsub("([%[%]%%])", "%%%1")
@@ -1204,6 +1245,10 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 	end
 
 	-- Draw ring overlays for jewel sockets
+	---@param jewel Item
+	---@param scrX number
+	---@param scrY number
+	---@param tint number[]
 	local function drawJewelRadius(jewel, scrX, scrY, tint)
 		-- Abyss jewels do not show radius art in game.
 		if isAbyssConquered(jewel.jewelData) then
@@ -1296,6 +1341,14 @@ function PassiveTreeViewClass:Draw(build, viewPort, inputEvents)
 		end
 	end
 end
+
+---@param handle ImageHandle
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param angle number
+---@param ... unknown
 function PassiveTreeViewClass:DrawImageRotated(handle, x, y, width, height, angle, ...)
 	if main.showAnimations == false then
 		-- Skip rotation and animation
@@ -1322,6 +1375,11 @@ function PassiveTreeViewClass:DrawImageRotated(handle, x, y, width, height, angl
 end
 
 -- Draws the given asset at the given position
+---@param data table
+---@param x number
+---@param y number
+---@param scale number
+---@param isHalf? boolean
 function PassiveTreeViewClass:DrawAsset(data, x, y, scale, isHalf)
 	if not data then
 		return
@@ -1343,6 +1401,8 @@ function PassiveTreeViewClass:DrawAsset(data, x, y, scale, isHalf)
 end
 
 -- Zoom the tree in or out
+---@param level number
+---@param viewPort Rect
 function PassiveTreeViewClass:Zoom(level, viewPort)
 	-- Calculate new zoom level and zoom factor
 	self.zoomLevel = m_max(0, m_min(12, self.zoomLevel + level))
@@ -1358,6 +1418,9 @@ function PassiveTreeViewClass:Zoom(level, viewPort)
 	self.zoomY = relY + (self.zoomY - relY) * factor
 end
 
+---@param x number
+---@param y number
+---@param viewPort Rect
 ---@param build Build
 function PassiveTreeViewClass:Focus(x, y, viewPort, build)
 	self.zoomLevel = 12
@@ -1370,6 +1433,8 @@ function PassiveTreeViewClass:Focus(x, y, viewPort, build)
 	self.zoomY = -y * scale
 end
 
+---@param node Node
+---@return boolean?
 function PassiveTreeViewClass:DoesNodeMatchSearchParams(node)
 	if node.type == "ClassStart" or (node.type == "Mastery" and not node.masteryEffects) then
 		return
@@ -1378,6 +1443,9 @@ function PassiveTreeViewClass:DoesNodeMatchSearchParams(node)
 	local needMatches = copyTable(self.searchParams)
 	local err
 
+	---@param haystack string
+	---@param need string[]
+	---@return string[]
 	local function search(haystack, need)
 		for i=#need, 1, -1 do
 			if haystack:matchOrPattern(need[i]) then
@@ -1511,13 +1579,16 @@ end
 ---@param tooltip Tooltip
 ---@param node Node
 ---@param build Build
----@param returnEarly boolean? Whether the function should stop after writing the mod info, before any allocation-specific info
+---@param returnEarly? boolean Whether the function should stop after writing the mod info, before any allocation-specific info
 function PassiveTreeViewClass:AddNodeTooltip(tooltip, node, build, returnEarly)
 	local fontSizeBig = main.showFlavourText and 18 or 16
 	self.skillTooltip:Clear()
 	tooltip.center = true
 	tooltip.maxWidth = 800
 	-- Appends the compare spec's jewel tooltip if it has a jewel in this allocated socket.
+	---@param socket Node
+	---@param withLabel boolean
+	---@return boolean
 	local function addCompareJewelSection(socket, withLabel)
 		local cJewel = self.compareSpec and self:GetCompareJewel(node.id)
 		local cAllocated = self.compareSpec and self.compareSpec.allocNodes and self.compareSpec.allocNodes[node.id]
@@ -1579,6 +1650,9 @@ function PassiveTreeViewClass:AddNodeTooltip(tooltip, node, build, returnEarly)
 		end
 	end
 
+	---@param node Node
+	---@param i integer
+	---@param line string
 	local function addModInfoToTooltip(node, i, line)
 		if node.mods[i] then
 			if launch.devModeAlt and node.mods[i].list then
@@ -1808,6 +1882,9 @@ function PassiveTreeViewClass:AddNodeTooltip(tooltip, node, build, returnEarly)
 	end
 end
 
+---@param tooltip Tooltip
+---@param node Node
+---@param build Build
 function PassiveTreeViewClass:AddCompareNodeTooltip(tooltip, node, build)
 	-- Tooltip for compare-only nodes (nodes only in the compared build, e.g. cluster jewel subgraph nodes)
 	local fontSizeBig = main.showFlavourText and 18 or 16
@@ -1868,6 +1945,8 @@ function PassiveTreeViewClass:AddCompareNodeTooltip(tooltip, node, build)
 	tooltip:AddLine(14, colorCodes.DEXTERITY .. "This node is only in the compared build")
 end
 
+---@param tooltip Tooltip
+---@param node Node
 function PassiveTreeViewClass:AddCompareNodeName(tooltip, node)
 	tooltip:SetRecipe(node.recipe)
 	local tooltipMap = {

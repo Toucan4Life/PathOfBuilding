@@ -7,7 +7,7 @@ local pairs = pairs
 local t_insert = table.insert
 local t_remove = table.remove
 
----@class SharedItemListControl: ListControl<Item>
+---@class SharedItemListControl: ListControl
 ---@field itemsTab ItemsTab
 ---@field defaultText string
 ---@field dragTargetList ListControl[]
@@ -21,6 +21,7 @@ local SharedItemListClass = newClass("SharedItemListControl", "ListControl")
 ---@param rect Rect?
 ---@param itemsTab ItemsTab
 ---@param forceTooltip boolean?
+---@return SharedItemListControl
 function SharedItemListClass:SharedItemListControl(anchor, rect, itemsTab, forceTooltip)
 	self:ListControl(anchor, rect, 16, "VERTICAL", true, main.sharedItemList, forceTooltip)
 	self.itemsTab = itemsTab
@@ -36,12 +37,19 @@ function SharedItemListClass:SharedItemListControl(anchor, rect, itemsTab, force
 	return self
 end
 
+---@param column integer
+---@param index integer
+---@param item Item
+---@return string?
 function SharedItemListClass:GetRowValue(column, index, item)
 	if column == 1 then
 		return colorCodes[item.rarity] .. item.name
 	end
 end
 
+---@param tooltip Tooltip
+---@param index integer
+---@param item Item
 function SharedItemListClass:AddValueTooltip(tooltip, index, item)
 	if main.popups[1] then
 		tooltip:Clear()
@@ -52,10 +60,17 @@ function SharedItemListClass:AddValueTooltip(tooltip, index, item)
 	end
 end
 
+---@param index integer
+---@param item Item
+---@return string dragType
+---@return Item dragValue
 function SharedItemListClass:GetDragValue(index, item)
 	return "Item", item
 end
 
+---@param type string
+---@param value Item
+---@param source? ListControl
 function SharedItemListClass:ReceiveDrag(type, value, source)
 	if type == "Item" then
 		local rawItem = { raw = value:BuildRaw() }
@@ -67,6 +82,9 @@ function SharedItemListClass:ReceiveDrag(type, value, source)
 	end
 end
 
+---@param index integer
+---@param item Item
+---@param doubleClick? boolean
 function SharedItemListClass:OnSelClick(index, item, doubleClick)
 	if doubleClick then
 		self.itemsTab:CreateDisplayItemFromRaw(item.raw, true)
@@ -74,10 +92,14 @@ function SharedItemListClass:OnSelClick(index, item, doubleClick)
 	end
 end
 
+---@param index integer
+---@param item Item
 function SharedItemListClass:OnSelCopy(index, item)
 	Copy(item:BuildRaw():gsub("\n","\r\n"))
 end
 
+---@param index integer
+---@param item Item
 function SharedItemListClass:OnSelDelete(index, item)
 	main:OpenConfirmPopup("Delete Item", "Are you sure you want to remove '"..item.name.."' from the shared item list?", "Delete", function()
 		t_remove(self.list, index)
