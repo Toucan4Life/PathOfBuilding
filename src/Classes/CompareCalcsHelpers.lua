@@ -9,7 +9,16 @@ local s_format = string.format
 
 local M = {}
 
+---@class CompareCalcsHelpers
+
+---@class CompareCalcModRow
+---@field value number|boolean
+---@field mod Mod
+
 -- Format a modifier value with its type for display
+---@param value number|boolean
+---@param modType NumericModTypes|string
+---@return string
 function M.FormatCalcModValue(value, modType)
 	if modType == "BASE" then
 		return s_format("%+g base", value)
@@ -35,6 +44,8 @@ function M.FormatCalcModValue(value, modType)
 end
 
 -- Format CamelCase mod name to spaced words
+---@param modName string
+---@return string
 function M.FormatCalcModName(modName)
 	return modName:gsub("([%l%d]:?)(%u)", "%1 %2"):gsub("(%l)(%d)", "%1 %2")
 end
@@ -42,6 +53,7 @@ end
 -- Resolve a modifier's source to a human-readable name
 ---@param mod Mod
 ---@param build Build
+---@return string
 function M.ResolveSourceName(mod, build)
 	if not mod.source then return "" end
 	local sourceType = mod.source:match("[^:]+") or ""
@@ -76,6 +88,10 @@ function M.ResolveSourceName(mod, build)
 end
 
 -- Get the modDB and config for a sectionData entry and actor
+---@param sectionData CalcSectionData
+---@param actor Actor
+---@return ModStore?
+---@return ModCfg?
 function M.GetModStoreAndCfg(sectionData, actor)
 	local cfg = {}
 	if sectionData.cfg and actor.mainSkill and actor.mainSkill[sectionData.cfg .. "Cfg"] then
@@ -96,6 +112,9 @@ function M.GetModStoreAndCfg(sectionData, actor)
 end
 
 -- Tabulate modifiers for a sectionData entry and actor
+---@param sectionData CalcSectionData
+---@param actor Actor
+---@return CompareCalcModRow[]
 function M.TabulateMods(sectionData, actor)
 	local modStore, cfg = M.GetModStoreAndCfg(sectionData, actor)
 	if not modStore then return {} end
@@ -110,6 +129,8 @@ function M.TabulateMods(sectionData, actor)
 end
 
 -- Build a unique key for a modifier row to match between builds
+---@param row { mod: Mod }
+---@return string
 function M.ModRowKey(row)
 	local src = row.mod.source or ""
 	local name = row.mod.name or ""
@@ -121,6 +142,13 @@ function M.ModRowKey(row)
 end
 
 -- Format a single modifier row as a tooltip line
+---@param row CompareCalcModRow
+---@param sectionData CalcSectionData
+---@param build Build
+---@return string displayValue
+---@return string sourceType
+---@return string sourceName
+---@return string modName
 function M.FormatModRow(row, sectionData, build)
 	local displayValue
 	if not sectionData.modType then
@@ -140,8 +168,9 @@ function M.FormatModRow(row, sectionData, build)
 end
 
 -- Get breakdown text lines for a build's actor
----@param sectionData any
+---@param sectionData CalcSectionData
 ---@param build Build
+---@return string[]?
 function M.GetBreakdownLines(sectionData, build)
 	if not sectionData.breakdown then return nil end
 	local calcsActor = build.calcsTab and build.calcsTab.calcsEnv and build.calcsTab.calcsEnv.player
@@ -170,6 +199,15 @@ end
 -- tooltip, primaryBuild, primaryLabel passed as args instead of self
 ---@param tooltip Tooltip
 ---@param primaryBuild Build
+---@param primaryLabel string
+---@param colData CalcSectionData[]
+---@param rowLabel string?
+---@param rowX number
+---@param rowY number
+---@param rowW number
+---@param rowH number
+---@param vp Rect
+---@param compareEntry CompareEntry
 function M.DrawCalcsTooltip(tooltip, primaryBuild, primaryLabel, colData, rowLabel, rowX, rowY, rowW, rowH, vp, compareEntry)
 	if tooltip:CheckForUpdate(colData, rowLabel) then
 		-- Get calcsEnv actors (these have breakdown data populated)
@@ -326,6 +364,8 @@ end
 -- Resolve a modifier's source name for breakdown panel display
 ---@param mod Mod
 ---@param build Build
+---@return string sourceType
+---@return string sourceName
 local function resolveModSource(mod, build)
 	local sourceType = mod.source and mod.source:match("[^:]+") or "?"
 	local sourceName = ""
@@ -361,6 +401,13 @@ end
 
 -- Draw a breakdown panel for a single build's SkillBuffs or SkillDebuffs,
 ---@param build Build
+---@param breakdownKey string
+---@param label string
+---@param cellX number
+---@param cellY number
+---@param cellW number
+---@param cellH number
+---@param vp Rect
 function M.DrawSkillBreakdownPanel(build, breakdownKey, label, cellX, cellY, cellW, cellH, vp)
 	local player = build.calcsTab and build.calcsTab.calcsEnv
 		and build.calcsTab.calcsEnv.player

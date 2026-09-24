@@ -13,14 +13,23 @@ local varList = require("Modules.ConfigOptions")
 local configVisibility = require("Modules.ConfigVisibility")
 local configModBrowser = require("Modules.ConfigModBrowser")
 
+---@class CustomModBlockData
+---@field title? string
+---@field enabled? boolean
+---@field text? string
+
 ---@class CustomModBlockControl: ControlHost, Control
+---@field configTab ConfigTab
+---@field blockIndex integer
+---@field blockData CustomModBlockData
 local CustomModBlockClass = newClass("CustomModBlockControl", "ControlHost", "Control")
 
 ---@param anchor Anchor?
 ---@param rect Rect?
 ---@param configTab ConfigTab
 ---@param blockIndex integer
----@param blockData any
+---@param blockData CustomModBlockData
+---@return CustomModBlockControl
 function CustomModBlockClass:CustomModBlockControl(anchor, rect, configTab, blockIndex, blockData)
 	self:Control(anchor, rect)
 	self:ControlHost()
@@ -95,12 +104,15 @@ function CustomModBlockClass:CustomModBlockControl(anchor, rect, configTab, bloc
 	return self
 end
 
+---@return number width
+---@return number height
 function CustomModBlockClass:GetSize()
 	local textHeight = self.controls.textEdit and self.controls.textEdit.height or 80
 	self.height = 22 + textHeight + 4
 	return 344, self.height
 end
 
+---@return boolean|Control?
 function CustomModBlockClass:IsMouseOver()
 	if not self:IsShown() then
 		return
@@ -108,6 +120,9 @@ function CustomModBlockClass:IsMouseOver()
 	return self:IsMouseInBounds() or self:GetMouseOverControl()
 end
 
+---@param key string
+---@param doubleClick? boolean
+---@return Control?
 function CustomModBlockClass:OnKeyDown(key, doubleClick)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -118,6 +133,7 @@ function CustomModBlockClass:OnKeyDown(key, doubleClick)
 	end
 end
 
+---@param viewPort Rect
 function CustomModBlockClass:Draw(viewPort)
 	if not self:IsShown() then
 		return
@@ -126,10 +142,44 @@ function CustomModBlockClass:Draw(viewPort)
 	self:DrawControls(viewPort)
 end
 
+---@alias ConfigValue string|number|boolean
+---@alias ConfigConditionalOption string|integer
+
+---@class ConfigSet
+---@field id integer
+---@field title? string
+---@field input table<string, ConfigValue>
+---@field placeholder table<string, ConfigValue>
+---@field customModsList CustomModBlockData[]
+
+---@class ConfigTabUndoState
+---@field input table<string, ConfigValue>
+---@field customModsList CustomModBlockData[]
+
 ---@class ConfigTab: UndoHandler, ControlHost, Control
+---@field build Build
+---@field input table<string, ConfigValue>
+---@field placeholder table<string, ConfigValue>
+---@field defaultState table<string, ConfigValue>
+---@field configSets table<integer, ConfigSet>
+---@field configSetOrderList integer[]
+---@field activeConfigSetId integer
+---@field enemyLevel integer
+---@field sectionList SectionControl[]
+---@field varControls table<string, Control>
+---@field modList ModList
+---@field enemyModList ModList
+---@field toggleConfigs boolean
+---@field calcFunc? fun(adjustments?: table, useFullDPS?: boolean): Output
+---@field calcBase? Output
+---@field customSection? SectionControl
+---@field customModsBlockControls? CustomModBlockControl[]
+---@field modFlag boolean
+---@field [string] unknown
 local ConfigTabClass = newClass("ConfigTab", "UndoHandler", "ControlHost", "Control")
 
 ---@param build Build
+---@return ConfigTab
 function ConfigTabClass:ConfigTab(build)
 	self:UndoHandler()
 	self:ControlHost()
@@ -186,10 +236,14 @@ function ConfigTabClass:ConfigTab(build)
 		self.toggleConfigs = not self.toggleConfigs
 	end)
 
+	---@param section SectionControl
+	---@return boolean
 	local function isCollapsed(section)
 		return self:IsSectionCollapsed(section)
 	end
 
+	---@param varData table
+	---@return boolean
 	local function searchMatch(varData)
 		local searchStr = self.controls.search.buf:lower():gsub("[%-%.%+%[%]%$%^%%%?%*]", "%%%0")
 		if searchStr and searchStr:match("%S") then
@@ -204,10 +258,14 @@ function ConfigTabClass:ConfigTab(build)
 	end
 
 	-- Override for Show All Configurations: when the toggle is on, show options that aren't on the shared exclusion list.
+	---@param varData table
+	---@return boolean
 	local function isShowAllConfig(varData)
 		return self.toggleConfigs and not configVisibility.isShowAllExcluded(varData)
 	end
 
+	---@param varData table
+	---@return boolean
 	local function implyCond(varData)
 		local mainEnv = self.build.calcsTab.mainEnv
 		if self.configSets[self.activeConfigSetId].input[varData.var] then
@@ -228,6 +286,9 @@ function ConfigTabClass:ConfigTab(build)
 		return false
 	end
 
+	---@param ifOption ConfigConditionalOption|ConfigConditionalOption[]
+	---@param ifFunc fun(ifOption: ConfigConditionalOption): boolean
+	---@return fun(): boolean
 	local function listOrSingleIfOption(ifOption, ifFunc)
 		return function()
 			if type(ifOption) == "table" then
@@ -241,6 +302,9 @@ function ConfigTabClass:ConfigTab(build)
 		end
 	end
 
+	---@param ifOption ConfigConditionalOption|ConfigConditionalOption[]
+	---@param ifFunc fun(ifOption: ConfigConditionalOption): string?
+	---@return fun(): string?
 	local function listOrSingleIfTooltip(ifOption, ifFunc)
 		return function()
 			if type(ifOption) == "table" then
@@ -832,15 +896,22 @@ function ConfigTabClass:ConfigTab(build)
 end
 
 -- A collapsed section hides its contents, unless a search is active
+---@param section SectionControl
+---@return boolean
 function ConfigTabClass:IsSectionCollapsed(section)
 	return section.collapsed and not self.controls.search.buf:match("%S")
 end
 
+---@param xml table
+---@param fileName string
 function ConfigTabClass:Load(xml, fileName)
 	self.activeConfigSetId = 1
 	self.configSets = { }
 	self.configSetOrderList = { 1 }
 
+	---@param node table
+	---@param configSetId integer
+	---@return boolean? loadError
 	local function setInputAndPlaceholder(node, configSetId)
 		if node.elem == "Input" then
 			if not node.attrib.name then
@@ -938,6 +1009,9 @@ function ConfigTabClass:Load(xml, fileName)
 	self:ResetUndo()
 end
 
+---@param var string
+---@param varType? string
+---@return ConfigValue?
 function ConfigTabClass:GetDefaultState(var, varType)
 	if self.configSets[self.activeConfigSetId].placeholder[var] ~= nil then
 		return self.configSets[self.activeConfigSetId].placeholder[var]
@@ -958,6 +1032,7 @@ function ConfigTabClass:GetDefaultState(var, varType)
 	end
 end
 
+---@param xml table
 function ConfigTabClass:Save(xml)
 	xml.attrib = {
 		activeConfigSet = tostring(self.activeConfigSetId)
@@ -1021,6 +1096,8 @@ function ConfigTabClass:UpdateControls()
 	self:UpdateCustomModsControls()
 end
 
+---@param viewPort Rect
+---@param inputEvents InputEvent[]
 function ConfigTabClass:Draw(viewPort, inputEvents)
 	self.x = viewPort.x
 	self.y = viewPort.y
@@ -1205,6 +1282,8 @@ end
 function ConfigTabClass:ImportCalcSettings()
 	local input = self.configSets[self.activeConfigSetId].input
 	local calcsInput = self.build.calcsTab.input
+	---@param old string
+	---@param new string
 	local function import(old, new)
 		input[new] = calcsInput[old]
 		calcsInput[old] = nil
@@ -1239,6 +1318,7 @@ function ConfigTabClass:ImportCalcSettings()
 	self:UpdateControls()
 end
 
+---@return ConfigTabUndoState
 function ConfigTabClass:CreateUndoState()
 	local configSet = self.configSets[self.activeConfigSetId]
 	return {
@@ -1247,6 +1327,7 @@ function ConfigTabClass:CreateUndoState()
 	}
 end
 
+---@param state ConfigTabUndoState|table<string, ConfigValue>
 function ConfigTabClass:RestoreUndoState(state)
 	local configSet = self.configSets[self.activeConfigSetId]
 	if type(state) == "table" and state.input then
@@ -1277,6 +1358,9 @@ function ConfigTabClass:OpenConfigSetManagePopup()
 end
 
 -- Creates a new config set
+---@param configSetId? integer
+---@param title? string
+---@return ConfigSet
 function ConfigTabClass:NewConfigSet(configSetId, title)
 	local configSet = { id = configSetId, title = title, input = { }, placeholder = { }, customModsList = { { title = "Default", enabled = true, text = "" } } }
 	if not configSetId then
@@ -1334,6 +1418,8 @@ function ConfigTabClass:UpdateCustomModsControls()
 end
 
 -- Changes the active config set
+---@param configSetId? integer
+---@param init? boolean
 function ConfigTabClass:SetActiveConfigSet(configSetId, init)
 	-- Initialize config sets if needed
 	if not self.configSetOrderList[1] then

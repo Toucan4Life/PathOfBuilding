@@ -8,9 +8,30 @@ local m_min = math.min
 local m_max = math.max
 local m_floor = math.floor
 
----@class DropDownControl: Control, ControlHost, TooltipHost, SearchHost
+---@class DropDownControl<T>: Control, ControlHost, TooltipHost, SearchHost
+---@field list T[]
+---@field selFunc? fun(index: integer, data: T, doubleClick?: boolean)
+---@field selIndex? integer
+---@field dropHeight number
+---@field dropped boolean
+---@field dropUp boolean
+---@field droppedWidth? number
+---@field maxDroppedWidth? number
+---@field enableDroppedWidth? boolean
+---@field enableChangeBoxWidth? boolean
+---@field hoverSel? integer
+---@field hoverSelDrop? integer
+---@field tag? string
 local DropDownClass = newClass("DropDownControl", "Control", "ControlHost", "TooltipHost", "SearchHost")
 
+---@generic T
+---@param anchor? Anchor
+---@param rect? Rect
+---@param list T[]
+---@param selFunc? fun(index: integer, data: T, doubleClick?: boolean)
+---@param tooltipText? Prop<string>
+---@param ignoreSearchOrder? boolean
+---@return DropDownControl<T>
 function DropDownClass:DropDownControl(anchor, rect, list, selFunc, tooltipText, ignoreSearchOrder)
 	self:Control(anchor, rect)
 	self:ControlHost()
@@ -58,6 +79,8 @@ function DropDownClass:DropDownControl(anchor, rect, list, selFunc, tooltipText,
 end
 
 -- maps the actual dropdown row index (after eventual filtering) to the original (unfiltered) list index
+---@param dropIndex integer
+---@return integer?
 function DropDownClass:DropIndexToListIndex(dropIndex)
 	-- 1:1
 	if not self:IsSearchActive() then
@@ -79,6 +102,9 @@ function DropDownClass:DropIndexToListIndex(dropIndex)
 end
 
 -- maps the original (unfiltered) list index to the actual dropdown row index (after eventual filtering)
+---@param listIndex integer
+---@param default? integer
+---@return integer
 function DropDownClass:ListIndexToDropIndex(listIndex, default)
 	-- 1:1
 	if not self:IsSearchActive() then
@@ -102,6 +128,7 @@ function DropDownClass:ListIndexToDropIndex(listIndex, default)
 	return default
 end
 
+---@return integer
 function DropDownClass:GetDropCount()
 	if self:IsSearchActive() then
 		return self:GetMatchCount()
@@ -110,6 +137,12 @@ function DropDownClass:GetDropCount()
 	end
 end
 
+---@param label string
+---@param searchInfo SearchInfo
+---@param x number
+---@param y number
+---@param width number
+---@param height number
 function DropDownClass:DrawSearchHighlights(label, searchInfo, x, y, width, height)
 	if searchInfo and searchInfo.matches then
 		local startX = 0
@@ -132,7 +165,8 @@ function DropDownClass:DrawSearchHighlights(label, searchInfo, x, y, width, heig
 	end
 end
 
-
+---@param value T
+---@param key? string
 function DropDownClass:SelByValue(value, key)
 	for index, listVal in ipairs(self.list) do
 		if type(listVal) == "table" then
@@ -149,14 +183,19 @@ function DropDownClass:SelByValue(value, key)
 	end
 end
 
+---@param key string
+---@return T?
 function DropDownClass:GetSelValueByKey(key)
 	return self.list[self.selIndex][key]
 end
 
+---@return T?
 function DropDownClass:GetSelValue()
 	return self.list[self.selIndex]
 end
 
+---@param newSel integer?
+---@param noCallSelFunc? boolean
 function DropDownClass:SetSel(newSel, noCallSelFunc)
 	newSel = m_max(1, m_min(self:GetDropCount(), newSel))
 	newSel = self:DropIndexToListIndex(newSel)
@@ -175,6 +214,7 @@ function DropDownClass:ScrollSelIntoView()
 	scrollBar:ScrollIntoView((self:ListIndexToDropIndex(self.selIndex, 1) - 2) * (height - 4), 3 * (height - 4))
 end
 
+---@return boolean
 function DropDownClass:IsMouseOver()
 	if not self:IsShown() then
 		return false
@@ -209,6 +249,8 @@ function DropDownClass:IsMouseOver()
 	return mOver, mOverComp
 end
 
+---@param viewPort Rect
+---@param noTooltip? boolean
 function DropDownClass:Draw(viewPort, noTooltip)
 	local x, y = self:GetPos()
 	local width, height = self:GetSize()
@@ -424,6 +466,8 @@ function DropDownClass:Draw(viewPort, noTooltip)
 	end
 end
 
+---@param key string
+---@return DropDownControl<T>?
 function DropDownClass:OnChar(key)
 	if not self:IsShown() or not self:IsEnabled() or not self.dropped then
 		return
@@ -431,6 +475,8 @@ function DropDownClass:OnChar(key)
 	return self:OnSearchChar(key)
 end
 
+---@param key string
+---@return DropDownControl<T>?
 function DropDownClass:OnKeyDown(key)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -463,6 +509,8 @@ function DropDownClass:OnKeyDown(key)
 	return self.dropped and self
 end
 
+---@param key string
+---@return Control?
 function DropDownClass:OnKeyUp(key)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -521,10 +569,13 @@ function DropDownClass:OnKeyUp(key)
 	return self.dropped and self
 end
 
+---@param key? string
+---@return integer?
 function DropDownClass:GetHoverIndex(key)
 	return self.hoverSel or self.selIndex
 end
 
+---@param textList T[]
 function DropDownClass:SetList(textList)
 	if textList then
 		wipeTable(self.list)
@@ -534,6 +585,7 @@ function DropDownClass:SetList(textList)
 	end
 end
 
+---@param enable boolean
 function DropDownClass:CheckDroppedWidth(enable)
 	self.enableDroppedWidth = enable
 	if self.enableDroppedWidth and self.list then

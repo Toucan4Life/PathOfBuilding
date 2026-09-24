@@ -9,6 +9,8 @@ local m_floor = math.floor
 local protected_replace = "*"
 local utf8 = require('lua-utf8')
 
+---@param str string
+---@return string
 local function lastLine(str)
 	local lastLineIndex = 1
 	while true do
@@ -22,6 +24,8 @@ local function lastLine(str)
 	return str:sub(lastLineIndex, -1)
 end
 
+---@param str string
+---@return integer
 local function newlineCount(str)
 	local count = 0
 	local lastLineIndex = 1
@@ -38,8 +42,34 @@ end
 
 ---@class EditControl: ControlHost, Control, UndoHandler, TooltipHost
 ---@field inactiveText (fun(buf: string?): string)|string
+---@field buf string
+---@field caret integer
+---@field sel? integer
+---@field prompt? string
+---@field placeholder? string
+---@field filter string|fun(text: string): string?
+---@field filterPattern string
+---@field isNumeric? boolean
+---@field limit? integer
+---@field changeFunc? fun(text: string, isPlaceholder?: boolean)
+---@field lineHeight? number
+---@field defaultLineHeight? number
+---@field allowZoom? boolean
+---@field blinkStart number
+---@field lastUndoState? string
 local EditClass = newClass("EditControl", "ControlHost", "Control", "UndoHandler", "TooltipHost")
 
+---@param anchor? Anchor
+---@param rect? Rect
+---@param init? string
+---@param prompt? string
+---@param filter? string|fun(text: string): string?
+---@param limit? integer
+---@param changeFunc? fun(text: string, isPlaceholder?: boolean)
+---@param lineHeight? number
+---@param allowZoom? boolean
+---@param clearable? boolean
+---@return EditControl
 function EditClass:EditControl(anchor, rect, init, prompt, filter, limit, changeFunc, lineHeight, allowZoom, clearable)
 	self:ControlHost()
 	self:Control(anchor, rect)
@@ -61,6 +91,7 @@ function EditClass:EditControl(anchor, rect, init, prompt, filter, limit, change
 	self.selBGCol = "^xBBBBBB"
 	self.blinkStart = GetTime()
 	self.allowZoom = allowZoom
+	---@return number
 	local function buttonSize()
 		local _, height = self:GetSize()
 		return height - 4
@@ -98,6 +129,8 @@ function EditClass:EditControl(anchor, rect, init, prompt, filter, limit, change
 	return self
 end
 
+---@param text string|number
+---@param notify? boolean
 function EditClass:SetText(text, notify)
 	self.buf = tostring(text)
 	self.caret = #self.buf + 1
@@ -108,6 +141,8 @@ function EditClass:SetText(text, notify)
 	self:ResetUndo()
 end
 
+---@param text string|number
+---@param notify? boolean
 function EditClass:SetPlaceholder(text, notify)
 	self.placeholder = tostring(text)
 	if notify and self.changeFunc then
@@ -115,6 +150,7 @@ function EditClass:SetPlaceholder(text, notify)
 	end
 end
 
+---@param bool? boolean
 function EditClass:SetProtected(bool)
 	self.protected = bool or true
 	-- set the font to be fixed to prevent strange
@@ -122,6 +158,7 @@ function EditClass:SetProtected(bool)
 	self.font = "FIXED"
 end
 
+---@return boolean|Control?
 function EditClass:IsMouseOver()
 	if not self:IsShown() then
 		return false
@@ -135,6 +172,7 @@ function EditClass:SelectAll()
 	self:ScrollCaretIntoView()
 end
 
+---@return string
 function EditClass:GetSelText()
 	local left = m_min(self.caret, self.sel)
 	local right = m_max(self.caret, self.sel)
@@ -142,6 +180,7 @@ function EditClass:GetSelText()
 	return newBuf
 end
 
+---@param text string
 function EditClass:ReplaceSel(text)
 	text = text:gsub("\r","")
 	if text:match(self.filterPattern) then
@@ -164,6 +203,7 @@ function EditClass:ReplaceSel(text)
 	self:AddUndoState()
 end
 
+---@param text string
 function EditClass:Insert(text)
 	text = text:gsub("\r","")
 	-- Remove any illegal chars from the "text" variable, to stop resulting in no text when an illegal character is found.
@@ -186,6 +226,7 @@ function EditClass:Insert(text)
 	self:AddUndoState()
 end
 
+---@param zoom number
 function EditClass:ZoomText(zoom)
 	if not self.allowZoom or not self.lineHeight then
 		return
@@ -233,6 +274,7 @@ function EditClass:ScrollCaretIntoView()
 	end
 end
 
+---@param offset integer
 function EditClass:MoveCaretVertically(offset)
 	local pre = self.buf:sub(1, self.caret - 1)
 	local caretX = DrawStringWidth(self.lineHeight, self.font, lastLine(pre))
@@ -243,6 +285,8 @@ function EditClass:MoveCaretVertically(offset)
 	self.blinkStart = GetTime()
 end
 
+---@param viewPort Rect
+---@param noTooltip? boolean
 function EditClass:Draw(viewPort, noTooltip)
 	local x, y = self:GetPos()
 	local width, height = self:GetSize()
@@ -440,6 +484,9 @@ function EditClass:OnFocusGained()
 	end
 end
 
+---@param key string
+---@param doubleClick? boolean
+---@return EditControl?
 function EditClass:OnKeyDown(key, doubleClick)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -665,6 +712,8 @@ function EditClass:OnKeyDown(key, doubleClick)
 	return self
 end
 
+---@param key string
+---@return EditControl?
 function EditClass:OnKeyUp(key)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -726,6 +775,8 @@ function EditClass:OnKeyUp(key)
 	return self.hasFocus and self
 end
 
+---@param key string
+---@return EditControl?
 function EditClass:OnChar(key)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -740,6 +791,7 @@ function EditClass:OnChar(key)
 	return self
 end
 
+---@return string
 function EditClass:CreateUndoState()
 	local state = {
 		buf = self.buf,
@@ -749,6 +801,7 @@ function EditClass:CreateUndoState()
 	return state
 end
 
+---@param state string
 function EditClass:RestoreUndoState(state)
 	self.buf = state.buf
 	self.caret = state.caret

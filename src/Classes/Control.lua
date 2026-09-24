@@ -35,9 +35,13 @@ local rect = {
 --]]
 
 ---@class Control
----@field enabled        boolean | fun(...: any): boolean
----@field onFocusGained? fun()
----@field onFocusLost?   fun()
+---@field enabled        Prop<boolean>
+---@field anchor         AnchorState
+---@field rectStart      Rect
+---@field hasFocus?      boolean
+---@field tabOrder?      Control[]
+---@field OnFocusGained? fun()
+---@field OnFocusLost?   fun()
 ---@field shown          Prop<boolean>
 ---@field x              Prop<number>?
 ---@field y              Prop<number>?
@@ -48,10 +52,17 @@ local rect = {
 local ControlClass = newClass("Control")
 
 ---@alias Anchor [AnchorPoint, Control|ControlHost, AnchorPoint, boolean|nil]
----@alias Rect [Prop<number>?,Prop<number>?, Prop<number>?, Prop<number>?]
+---@alias Rect [Prop<number>?, Prop<number>?, Prop<number>?, Prop<number>?]
+
+---@class AnchorState
+---@field point? AnchorPoint
+---@field other? Control|ControlHost
+---@field otherPoint? AnchorPoint
+---@field collapse? boolean
 
 ---@param anchor? Anchor
 ---@param rect? Rect
+---@return Control
 function ControlClass:Control(anchor, rect)
 	self.rectStart = rect or {0, 0, 0, 0}
 	self.x, self.y, self.width, self.height = unpack(self.rectStart)
@@ -68,7 +79,7 @@ end
 ---@alias Prop<T> (fun(self: self): T) | T
 
 ---@param name string
----@return any value
+---@return unknown value
 function ControlClass:GetProperty(name)
 	if type(self[name]) == "function" then
 		return self[name](self)
@@ -77,6 +88,12 @@ function ControlClass:GetProperty(name)
 	end
 end
 
+---@param point AnchorPoint
+---@param other Control|ControlHost
+---@param otherPoint AnchorPoint
+---@param x? Prop<number>
+---@param y? Prop<number>
+---@param collapse? boolean
 function ControlClass:SetAnchor(point, other, otherPoint, x, y, collapse)
 	self.anchor.point = point
 	self.anchor.other = other
@@ -88,6 +105,8 @@ function ControlClass:SetAnchor(point, other, otherPoint, x, y, collapse)
 	end
 end
 
+---@return number x
+---@return number y
 function ControlClass:GetPos()
 	if self.anchor.collapse and self.anchor.other and not self.anchor.other:GetProperty("shown") then
 		local x, y = self.anchor.other:GetPos()
@@ -117,18 +136,23 @@ function ControlClass:GetPos()
 	return x, y
 end
 
+---@return number width
+---@return number height
 function ControlClass:GetSize()
 	return self:GetProperty("width"), self:GetProperty("height")
 end
 
+---@return boolean
 function ControlClass:IsShown()
 	return (not self.anchor.other or self.anchor.collapse or self.anchor.other:IsShown()) and self:GetProperty("shown")
 end
 
+---@return boolean
 function ControlClass:IsEnabled()
 	return self:GetProperty("enabled")
 end
 
+---@return boolean
 function ControlClass:IsMouseInBounds()
 	local x, y = self:GetPos()
 	local width, height = self:GetSize()
@@ -136,6 +160,7 @@ function ControlClass:IsMouseInBounds()
 	return cursorX >= x and cursorY >= y and cursorX < x + width and cursorY < y + height
 end
 
+---@param focus boolean
 function ControlClass:SetFocus(focus)
 	if focus ~= self.hasFocus then
 		if focus and self.OnFocusGained then
@@ -147,6 +172,7 @@ function ControlClass:SetFocus(focus)
 	end
 end
 
+---@param master Control
 function ControlClass:AddToTabGroup(master)
 	if master.tabOrder then
 		t_insert(master.tabOrder, self)
@@ -156,6 +182,8 @@ function ControlClass:AddToTabGroup(master)
 	self.tabOrder = master.tabOrder
 end
 
+---@param step integer
+---@return Control
 function ControlClass:TabAdvance(step)
 	if self.tabOrder then
 		local index = isValueInArray(self.tabOrder, self)
