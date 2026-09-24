@@ -36,6 +36,8 @@ local legacyOrbitRadii = { 0, 82, 162, 335, 493 }
 -- Retrieve the file at the given URL
 -- This is currently disabled as it does not work due to issues
 -- its possible to fix this but its never used due to us performing preprocessing on tree
+---@param URL string
+---@return string|false
 local function getFile(URL)
 	local page = ""
 	local easy = common.curl.easy()
@@ -57,9 +59,14 @@ end
 ---@field background any
 ---@field isProxy boolean?
 
+---@class PassiveTreeSpriteSheet
+---@field handle ImageHandle
+---@field width number
+---@field height number
+
 ---@class PassiveTree
----@field classes any[] A list of classes on the tree
----@field alternate_ascendancies any[]?
+---@field classes table[] A list of classes on the tree
+---@field alternate_ascendancies table[]?
 ---@field tree "Default"|"DefaultAltAscendancies"
 ---@field groups PassiveTreeGroup[]
 ---@field nodes table<"root"|integer, Node>
@@ -68,10 +75,30 @@ end
 ---@field min_y integer
 ---@field max_x integer
 ---@field max_y integer
----@field constants table<string, any>
+---@field constants table<string, unknown>
 ---@field points table<string, integer>
+---@field treeVersion string
+---@field size number
+---@field sockets table<integer, Node>
+---@field connectors table[]
+---@field orbitRadii number[]
+---@field skillsPerOrbit integer[]
+---@field masteryEffects table<integer, unknown>
+---@field assets table<string, unknown>
+---@field legion table
+---@field tattoo table
+---@field classNameMap table<string, integer>
+---@field ascendNameMap table<string, table>
+---@field secondaryAscendNameMap? table<string, table>
+---@field internalAscendNameMap table<string, table>
+---@field classNotables table
+---@field orbitAnglesByOrbit table<integer, number[]>
+---@field spriteMap table<string, table>
+---@field bloodlineSpritePrefixes? table<string, string>
 local PassiveTreeClass = newClass("PassiveTree")
 
+---@param treeVersion string
+---@return PassiveTree
 function PassiveTreeClass:PassiveTree(treeVersion)
 	self.treeVersion = treeVersion
 	local versionNum = treeVersions[treeVersion].num
@@ -388,6 +415,8 @@ function PassiveTreeClass:PassiveTree(treeVersion)
 
 	-- Load legion sprite sheets and build sprite map
 	local legionSprites = require("TreeData.legion.tree-legion")
+	---@param data { filename: string }
+	---@return PassiveTreeSpriteSheet
 	local function loadLegionSheet(data)
 		local sheet = spriteSheets[data.filename]
 		if not sheet then
@@ -792,6 +821,8 @@ function PassiveTreeClass:PassiveTree(treeVersion)
 	return self
 end
 
+---@param node Node
+---@param startIndex? integer
 function PassiveTreeClass:ProcessStats(node, startIndex)
 	startIndex = startIndex or 1
 	if startIndex == 1 then
@@ -872,6 +903,7 @@ function PassiveTreeClass:ProcessStats(node, startIndex)
 end
 
 -- Common processing code for nodes (used for both real tree nodes and subgraph nodes)
+---@param node Node
 function PassiveTreeClass:ProcessNode(node)
 	-- Assign node artwork assets
 	if node.type == "Mastery" and node.masteryEffects then
@@ -906,6 +938,10 @@ function PassiveTreeClass:ProcessNode(node)
 end
 
 -- Checks if a given image is present and downloads it from the given URL if it isn't there
+---@param imgName string
+---@param url string
+---@param data table<number|string, unknown> @Asset metadata table updated with handle, width, and height fields.
+---@param ... unknown
 function PassiveTreeClass:LoadImage(imgName, url, data, ...)
 	local imgFile = io.open("TreeData/"..imgName, "r")
 	if imgFile then
@@ -933,6 +969,9 @@ function PassiveTreeClass:LoadImage(imgName, url, data, ...)
 end
 
 -- Generate the quad used to render the line between the two given nodes
+---@param node1 Node
+---@param node2 Node
+---@return table[]
 function PassiveTreeClass:BuildConnector(node1, node2)
 	local connector = {
 		ascendancyName = node1.ascendancyName,
@@ -996,6 +1035,10 @@ function PassiveTreeClass:BuildConnector(node1, node2)
 	return { connector }
 end
 
+---@param arcAngle number
+---@param node1 Node
+---@param connector table
+---@param isMirroredArc? boolean
 function PassiveTreeClass:BuildArc(arcAngle, node1, connector, isMirroredArc)
 	connector.type = "Orbit" .. node1.o
 	-- This is an arc texture mapped onto a kite-shaped quad
@@ -1038,6 +1081,8 @@ function PassiveTreeClass:BuildArc(arcAngle, node1, connector, isMirroredArc)
 	connector.c[15], connector.c[16] = p, 0
 end
 
+---@param nodesInOrbit integer
+---@return number[]
 function PassiveTreeClass:CalcOrbitAngles(nodesInOrbit)
 	local orbitAngles = {}
 

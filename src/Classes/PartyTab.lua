@@ -9,10 +9,32 @@ local s_format = string.format
 local t_insert = table.insert
 local m_max = math.max
 
+---@alias PartyBuffType "PartyMemberStats"|"Aura"|"Curse"|"Warcry"|"Link"|"EnemyConditions"|"EnemyMods"|"PlayerMods"
+
+---@class PartyTabLastContent
+---@field PartyMemberStats? string
+---@field Aura string
+---@field Curse string
+---@field Warcry string
+---@field Link string
+---@field EnemyCond string
+---@field EnemyMods string
+---@field EnableExportBuffs boolean
+---@field showAdvancedTools boolean
+
 ---@class PartyTab: ControlHost, Control
+---@field build Build
+---@field actor table
+---@field enemyModList ModList
+---@field buffExports table
+---@field enableExportBuffs boolean
+---@field lastContent PartyTabLastContent
+---@field modFlag boolean
+---@field [string] unknown
 local PartyTabClass = newClass("PartyTab", "ControlHost", "Control")
 
 ---@param build Build
+---@return PartyTab
 function PartyTabClass:PartyTab(build)
 	self:ControlHost()
 	self:Control()
@@ -513,6 +535,8 @@ function PartyTabClass:PartyTab(build)
 	return self
 end
 
+---@param xml table
+---@param fileName string
 function PartyTabClass:Load(xml, fileName)
 	for _, node in ipairs(xml) do
 		if node.elem == "ImportedBuffs" then
@@ -572,6 +596,7 @@ function PartyTabClass:Load(xml, fileName)
 	self.lastContent.showAdvancedTools = self.controls.ShowAdvanceTools.state
 end
 
+---@param xml table
 function PartyTabClass:Save(xml)
 	local child
 	if self.controls.editPartyMemberStats.buf and self.controls.editPartyMemberStats.buf ~= "" then
@@ -667,6 +692,8 @@ function PartyTabClass:Save(xml)
 	self.lastContent.showAdvancedTools = self.controls.ShowAdvanceTools.state
 end
 
+---@param viewPort Rect
+---@param inputEvents InputEvent[]
 function PartyTabClass:Draw(viewPort, inputEvents)
 	self.x = viewPort.x
 	self.y = viewPort.y
@@ -715,6 +742,10 @@ function PartyTabClass:Draw(viewPort, inputEvents)
 			or self.lastContent.showAdvancedTools ~= self.controls.ShowAdvanceTools.state)
 end
 
+---@param list ModDB|ModList|table
+---@param buf string
+---@param buffType PartyBuffType
+---@param label? LabelControl|table
 function PartyTabClass:ParseBuffs(list, buf, buffType, label)
 	if buffType == "EnemyConditions" then
 		for line in buf:gmatch("([^\n]*)\n?") do
@@ -981,6 +1012,7 @@ function PartyTabClass:ParseBuffs(list, buf, buffType, label)
 	end
 end
 
+---@param buffExports table
 function PartyTabClass:setBuffExports(buffExports)
 	if not self.enableExportBuffs then
 		return
@@ -989,6 +1021,8 @@ function PartyTabClass:setBuffExports(buffExports)
 	self.buffExports = copyTable(buffExports, true)
 end
 
+---@param buffType PartyBuffType
+---@return string
 function PartyTabClass:exportBuffs(buffType)
 	if not self.enableExportBuffs or not self.buffExports or not self.buffExports[buffType] then
 		return ""

@@ -15,12 +15,21 @@ local dkjson = require "dkjson"
 
 local influenceInfo = itemLib.influenceInfo.all
 
+---@class RealmInfo
+---@field label string
+---@field id string
+---@field realmCode string
+---@field hostName string
+---@field profileURL string
+
+---@type RealmInfo[]
 local realmList = {
 	{ label = "PC",      id = "PC",   realmCode = "pc",   hostName = "https://www.pathofexile.com/", profileURL = "account/view-profile/" },
 	{ label = "Xbox",    id = "XBOX", realmCode = "xbox", hostName = "https://www.pathofexile.com/", profileURL = "account/view-profile/" },
 	{ label = "Sony",    id = "SONY", realmCode = "sony", hostName = "https://www.pathofexile.com/", profileURL = "account/view-profile/" },
 }
 
+---@param self ImportTab
 local function addOAuthControls(self)
 	self.usingOauth = true
 	self.isAuthorized = function() return main.api.authToken ~= nil end
@@ -40,10 +49,12 @@ local function addOAuthControls(self)
 	--- @type table<string, table[]>
 	self.characterList = {}
 
+	---@return boolean
 	local function fetchButtonEnabled()
 		local realm = self.controls.accountRealm:GetSelValue()
 		return not (realm and self.characterList[realm.realmCode])
 	end
+	---@return string
 	local function charImportStatus()
 		if not self.isAuthorized() and not self.oauthTimer then
 			return colorCodes.WARNING .. "Not authenticated"
@@ -139,6 +150,9 @@ local function addOAuthControls(self)
 		if not main.api.authToken then return end
 		local realm = self.controls.accountRealm:GetSelValue()
 		self.oauthLoading = true
+		---@param body table?
+		---@param err string?
+		---@param timeNext integer?
 		local function onResponse(body, err, timeNext)
 			if not err then
 				self.characterList[realm.realmCode] = body.characters
@@ -202,6 +216,7 @@ local function addOAuthControls(self)
 		end)
 	self.controls.accountRealm:SelByValue(main.lastRealm or "PC", "id")
 
+	---@return string
 	local function fetchTextFunc()
 		local realm = self.controls.accountRealm:GetSelValue()
 		if realm and self.characterList[realm.realmCode] then
@@ -214,7 +229,8 @@ local function addOAuthControls(self)
 	self.controls.accountRealmFetchButton.enabled = fetchButtonEnabled
 
 	-- league select
-	--- @param newLeague string
+	---@param _ integer
+	---@param newLeague string
 	local function onLeagueChange(_, newLeague)
 		local realm = self.controls.accountRealm:GetSelValue().realmCode
 		if newLeague == "Any" then
@@ -236,6 +252,9 @@ local function addOAuthControls(self)
 	end
 
 	-- import action controls
+	---@param realmId string
+	---@param league string
+	---@param charName string
 	local function saveDetails(realmId, league, charName)
 		main.lastRealm = realmId
 		self.lastRealm = realmId
@@ -254,6 +273,8 @@ local function addOAuthControls(self)
 
 			saveDetails(realm.id, league, selectedName)
 			local deleteJewels = self.controls.charImportTreeClearJewels.state
+			---@param data table?
+			---@param errMsg string?
 			local function importHandler(data, errMsg)
 				if data and data.character then
 					self.oauthErrCode = nil
@@ -319,6 +340,7 @@ local function addOAuthControls(self)
 	self.controls.charImportItemsIgnoreWeaponSwap = new("CheckBoxControl"):CheckBoxControl({ "LEFT", self.controls.charImportItems,
 		"RIGHT" }, { 380, 0, 18 }, "Ignore weapon swap:", nil, "Ignore items and skills in weapon swap.", false)
 end
+---@param self ImportTab
 local function addAccountNameControls(self)
 	self.charImportMode = "GETACCOUNTNAME"
 	self.charImportStatus = "Idle"
@@ -471,6 +493,9 @@ local function addAccountNameControls(self)
 end
 
 ---@class ImportTab: ControlHost, Control
+---@field build Build
+---@field modFlag boolean
+---@field [string] unknown
 local ImportTabClass = newClass("ImportTab", "ControlHost", "Control")
 
 ---@param build Build
@@ -739,6 +764,8 @@ function ImportTabClass:TryFetchCharacterList()
 	end
 end
 
+---@param xml table
+---@param fileName string
 function ImportTabClass:Load(xml, fileName)
 	self.lastRealm = xml.attrib.lastRealm
 	self.lastLeague = xml.attrib.lastLeague
@@ -756,6 +783,7 @@ function ImportTabClass:Load(xml, fileName)
 	self.lastCharacterHash = xml.attrib.lastCharacterHash
 end
 
+---@param xml table
 function ImportTabClass:Save(xml)
 	xml.attrib = {
 		lastRealm = self.lastRealm,
@@ -773,6 +801,8 @@ function ImportTabClass:Save(xml)
 	xml.attrib.importLink = (xml.attrib.importLink and xml.attrib.importLink:len() < 100) and xml.attrib.importLink or nil
 end
 
+---@param viewPort Rect
+---@param inputEvents InputEvent[]
 function ImportTabClass:Draw(viewPort, inputEvents)
 	self.x = viewPort.x
 	self.y = viewPort.y
@@ -786,6 +816,9 @@ function ImportTabClass:Draw(viewPort, inputEvents)
 	self:DrawControls(viewPort)
 end
 
+---@param json string
+---@return table? data
+---@return string? errMsg
 function ImportTabClass:ProcessSiteJSON(json)
 	local func, errMsg = loadstring("return " .. jsonToLua(json))
 	if errMsg then
@@ -811,6 +844,7 @@ function ImportTabClass:SaveAccountHistory()
 	end
 end
 
+---@param realm RealmInfo
 function ImportTabClass:DownloadPassiveTree(realm)
 	self.charImportMode = "IMPORTING"
 	self.charImportStatus = "Retrieving character passive tree..."
@@ -849,6 +883,7 @@ function ImportTabClass:DownloadPassiveTree(realm)
 		end)
 end
 
+---@param realm RealmInfo
 function ImportTabClass:DownloadItems(realm)
 	self.charImportMode = "IMPORTING"
 	self.charImportStatus = "Retrieving character items..."
@@ -884,7 +919,10 @@ function ImportTabClass:DownloadItems(realm)
 			self:ImportItemsAndSkills(charData, clearItems, clearSkills, ignoreWeaponSwap)
 		end)
 end
+---@param realm RealmInfo
 function ImportTabClass:DownloadSiteCharacterList(realm)
+	---@param league string
+	---@return string
 	function FindMatchingStandardLeague(league)
 		-- Find a Standard league name for a given league name
 		-- Reference https://api.pathofexile.com/league?realm=pc
@@ -1166,6 +1204,9 @@ function ImportTabClass:ImportPassiveTreeAndJewels(charData, deleteJewels)
 
 	-- Alternate trees don't have an identifier, so we're forced to look up something that is unique to that tree
 	-- Hopefully this changes, because it's totally unmaintainable
+	---@param className string
+	---@param treeVersion string
+	---@return boolean?
 	local function isAscendancyInTree(className, treeVersion)
 		local classes = main.tree[treeVersion].classes
 		for _, class in pairs(classes) do
@@ -1226,6 +1267,8 @@ function ImportTabClass:ImportPassiveTreeAndJewels(charData, deleteJewels)
 	end
 	self.build.configTab.varControls["resistancePenalty"]:SetSel(resistancePenaltyIndex)
 
+	---@param dropdown DropDownControl
+	---@param val string
 	local function setSelByVal(dropdown, val)
 		for i, v in ipairs(dropdown.list) do
 			if v.val == val then
@@ -1254,6 +1297,8 @@ end
 
 local SOCKET_GROUP_REIMPORT_KEY_SEPARATOR = "\31"
 
+---@param socketGroup table
+---@return string
 local function getSocketGroupReimportKey(socketGroup)
 	-- Use a rarely-used separator to avoid accidental collisions when concatenating fields.
 	local gemNameParts = { }
@@ -1268,6 +1313,9 @@ local function getSocketGroupReimportKey(socketGroup)
 	}, SOCKET_GROUP_REIMPORT_KEY_SEPARATOR)
 end
 
+---@param socketGroup table
+---@param isMainGroup boolean
+---@return table
 local function snapshotSocketGroupReimportState(socketGroup, isMainGroup)
 	local gemStates = { }
 	for gemIndex, gem in ipairs(socketGroup.gemList) do
@@ -1302,6 +1350,8 @@ local function snapshotSocketGroupReimportState(socketGroup, isMainGroup)
 	}
 end
 
+---@param gem table
+---@param state table
 local function applyGemReimportState(gem, state)
 	gem.enabled = state.enabled
 	gem.count = state.count
@@ -1321,6 +1371,8 @@ local function applyGemReimportState(gem, state)
 	gem.enableGlobal2 = state.enableGlobal2
 end
 
+---@param socketGroup table
+---@param state table
 local function applySocketGroupReimportState(socketGroup, state)
 	socketGroup.enabled = state.enabled
 	socketGroup.includeInFullDPS = state.includeInFullDPS
@@ -1339,6 +1391,7 @@ end
 
 local GUARD_ITEM_SET = "Animate Guardian"
 -- Locates AG's item set from the import
+---@return ItemSet
 function ImportTabClass:GetOrCreateGuardianItemSet()
 	local itemsTab = self.build.itemsTab
 	for _, itemSetId in ipairs(itemsTab.itemSetOrderList) do
@@ -1354,6 +1407,7 @@ function ImportTabClass:GetOrCreateGuardianItemSet()
 end
 
 -- Allocates AG's item set for the AG skill gem.
+---@param itemSetId integer
 function ImportTabClass:AssignGuardianItemSet(itemSetId)
 	local itemsTab = self.build.itemsTab
 	for _, socketGroup in ipairs(self.build.skillsTab.socketGroupList) do
@@ -1494,6 +1548,10 @@ local rarityMap = { [0] = "NORMAL", "MAGIC", "RARE", "UNIQUE", [9] = "RELIC", [1
 local slotMap = { ["Weapon"] = "Weapon 1", ["Offhand"] = "Weapon 2", ["Weapon2"] = "Weapon 1 Swap", ["Offhand2"] = "Weapon 2 Swap", ["Helm"] = "Helmet", ["BodyArmour"] = "Body Armour", ["Gloves"] = "Gloves", ["Boots"] = "Boots",
 				  ["Amulet"] = "Amulet", ["Ring"] = "Ring 1", ["Ring2"] = "Ring 2", ["Ring3"] = "Ring 3", ["Belt"] = "Belt",  ["BrequelGrafts"] = "Graft 1", ["BrequelGrafts2"] = "Graft 2", }
 
+---@param itemData GGGItem
+---@param slotName? string
+---@param ignoreWeaponSwap? boolean
+---@param itemSetId? integer
 function ImportTabClass:ImportItem(itemData, slotName, ignoreWeaponSwap, itemSetId)
 	if not slotName then
 		if itemData.inventoryId == "PassiveJewels" then
@@ -1820,6 +1878,9 @@ function ImportTabClass:ImportItem(itemData, slotName, ignoreWeaponSwap, itemSet
 	end
 end
 
+---@param item Item
+---@param socketedItems GGGItem[]
+---@param slotName string
 function ImportTabClass:ImportSocketedItems(item, socketedItems, slotName)
 	-- Build socket group list
 	local itemSocketGroupList = { }
@@ -1898,6 +1959,7 @@ function ImportTabClass:ImportSocketedItems(item, socketedItems, slotName)
 end
 
 -- Return the index of the group with the most gems
+---@return integer
 function ImportTabClass:GuessMainSocketGroup()
 	local largestGroupSize = 0
 	local largestGroupIndex = 1
@@ -1910,10 +1972,14 @@ function ImportTabClass:GuessMainSocketGroup()
 	return largestGroupIndex
 end
 
+---@param x string
+---@return string
 function HexToChar(x)
 	return string.char(tonumber(x, 16))
 end
 
+---@param url string?
+---@return string?
 function UrlDecode(url)
 	if url == nil then
 		return

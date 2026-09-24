@@ -32,15 +32,48 @@ local m_floor = math.floor
 
 ---@class ListControl<T>: Control, ControlHost
 ---@field list T[]
+---@field rowHeight number
+---@field scroll "HORIZONTAL"|"VERTICAL"|boolean|nil
+---@field scrollH? boolean
+---@field isMutable? boolean
+---@field forceTooltip? boolean
+---@field colList ListColumn<T>[]
+---@field tooltip Tooltip
+---@field font Font
+---@field labelPositionOffset [number, number]
+---@field selIndex? integer
+---@field selValue? T
+---@field selDragging? boolean
+---@field selDragActive? boolean
+---@field selDragIndex? integer
+---@field selCX? number
+---@field selCY? number
+---@field hoverIndex? integer
+---@field hoverValue? T
+---@field dragTargetList? ListControl<unknown>[]
+---@field dragTarget? ListControl<unknown>
+---@field dragType? string
+---@field dragValue? unknown
+---@field otherDragSource? ListControl<unknown>
+---@field otherDragTargeting? boolean
+
+---@class ListColumn<T>
+---@field label? string
+---@field width? Prop<number>|fun(list: ListControl<T>, column: ListColumn<T>): number
+---@field align? "LEFT"|"RIGHT"|"CENTER_X"
+---@field _offset? number
+---@field _width? number
 local ListClass = newClass("ListControl", "Control", "ControlHost")
 
+---@generic T
 ---@param anchor Anchor?
 ---@param rect Rect?
 ---@param rowHeight number
 ---@param scroll "HORIZONTAL"|"VERTICAL"|boolean|nil
 ---@param isMutable boolean?
----@param list any[]?
----@param forceTooltip any
+---@param list T[]?
+---@param forceTooltip? boolean
+---@return ListControl<T>
 function ListClass:ListControl(anchor, rect, rowHeight, scroll, isMutable, list, forceTooltip)
 	self:Control(anchor, rect)
 	self:ControlHost()
@@ -85,7 +118,8 @@ function ListClass:ListControl(anchor, rect, rowHeight, scroll, isMutable, list,
 	return self
 end
 
-
+---@param index integer
+---@return boolean
 function ListClass:SelectIndex(index)
 	self.selValue = self.list[index]
 	if not self.selValue then
@@ -108,6 +142,10 @@ function ListClass:SelectIndex(index)
 	return true
 end
 
+---@generic T
+---@param column ListColumn<T>
+---@param property string
+---@return unknown
 function ListClass:GetColumnProperty(column, property)
 	if type(column[property]) == "function" then
 		return column[property](self, column)
@@ -116,6 +154,7 @@ function ListClass:GetColumnProperty(column, property)
 	end
 end
 
+---@return boolean|Control?
 function ListClass:IsMouseOver()
 	if not self:IsShown() then
 		return
@@ -123,6 +162,13 @@ function ListClass:IsMouseOver()
 	return self:IsMouseInBounds() or self:GetMouseOverControl()
 end
 
+---@class ListRegion
+---@field x number
+---@field y number
+---@field width number
+---@field height number
+
+---@return ListRegion
 function ListClass:GetRowRegion()
 	local width, height = self:GetSize()
 	return {
@@ -133,6 +179,8 @@ function ListClass:GetRowRegion()
 	}
 end
 
+---@param viewPort Rect
+---@param noTooltip? boolean
 function ListClass:Draw(viewPort, noTooltip)
 	local x, y = self:GetPos()
 	local width, height = self:GetSize()
@@ -337,6 +385,9 @@ function ListClass:Draw(viewPort, noTooltip)
 	end
 end
 
+---@param key string
+---@param doubleClick? boolean
+---@return Control?
 function ListClass:OnKeyDown(key, doubleClick)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -416,7 +467,8 @@ function ListClass:OnKeyDown(key, doubleClick)
 	end
 	return self
 end
-
+---@param key string
+---@return ListControl<T>?
 function ListClass:OnKeyUp(key)
 	if not self:IsShown() or not self:IsEnabled() then
 		return
@@ -470,6 +522,7 @@ function ListClass:OnKeyUp(key)
 	return self
 end
 
+---@return integer?
 function ListClass:GetHoverIndex()
 	local x, y = self:GetPos()
 	local cursorX, cursorY = GetCursorPos()
@@ -482,6 +535,8 @@ function ListClass:GetHoverIndex()
 	end
 end
 
+---@param key? string
+---@return T?
 function ListClass:GetHoverValue(key)
 	local index = self:GetHoverIndex()
 	if index then
