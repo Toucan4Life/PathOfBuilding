@@ -925,6 +925,7 @@ data.timelessJewelTypes = {
 	[10] = "Abyss Amanamu",
 	[11] = "Abyss Zorath",
 }
+---@type table<integer, number>
 data.timelessJewelSeedMin = {
 	[1] = 100,
 	[2] = 10000,
@@ -938,6 +939,7 @@ data.timelessJewelSeedMin = {
 	[10] = 100,
 	[11] = 100,
 }
+---@type table<integer, number>
 data.timelessJewelSeedMax = {
 	[1] = 8000,
 	[2] = 18000,
