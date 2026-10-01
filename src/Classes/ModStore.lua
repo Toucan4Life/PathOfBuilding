@@ -28,12 +28,16 @@ local conditionName = setmetatable({ }, { __index = function(t, var)
 end })
 
 ---@class ModCfg
+---@field [string] any
 ---@field flags integer? bit mask
 ---@field keywordFlags integer?
 ---@field skillName string?
 ---@field summonSkillName string?
 ---@field skillGem any?
 ---@field skillGrantedEffect any?
+---@field grantedEffect? table
+---@field srcInstance? table
+---@field matchesSocket? boolean
 ---@field skillPart integer?
 ---@field skillTypes table?
 ---@field skillCond table<string, boolean>?
@@ -48,7 +52,27 @@ end })
 ---@field dexterityGems integer?
 ---@field intelligenceGems integer?
 ---@field strengthGems integer?
+---@field neg? boolean
+---@field var? string
+---@field varList? table
+---@field base? number
+---@field ramp? number
+---@field limitVar? string
+---@field reservedPercent? number
+---@field reservedFlat? number
+---@field efficiency? number
+---@field corruptedRange? number
+---@field newModId? string
+---@field modList? ModList
+---@field sockets? table
+---@field minionData? table
+---@field globalLimitKey? string
+---@field partyMembers? table
 ---@field item Item?
+---@field varList table?
+---@field sockets table?
+---@field minionData table?
+---@field globalLimitKey string?
 
 ---@class SkillCfg: ModCfg
 ---@field flags integer
