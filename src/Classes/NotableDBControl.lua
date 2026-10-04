@@ -13,7 +13,7 @@ local m_huge = math.huge
 local s_format = string.format
 
 ---@param node Node
----@return boolean
+---@return boolean?
 local function IsAnointableNode(node)
 	return node.recipe and #node.recipe >= 1
 end

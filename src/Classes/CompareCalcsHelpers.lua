@@ -119,7 +119,6 @@ function M.TabulateMods(sectionData, actor)
 	local modStore, cfg = M.GetModStoreAndCfg(sectionData, actor)
 	if not modStore then return {} end
 	local modType = sectionData.modType
-	if not modType then return {} end
 	local modName = sectionData.modName
 	if not modName then return {} end
 
@@ -162,7 +161,7 @@ function M.FormatModRow(row, sectionData, build)
 	end
 
 	local sourceType = row.mod.source and row.mod.source:match("[^:]+") or "?"
-	local sourceName = M.ResolveSourceName(row.mod, build)
+	local sourceName = M.ResolveSourceName(row.mod, build) or ""
 	local modName = ""
 	if type(sectionData.modName) == "table" then
 		modName = "  " .. M.FormatCalcModName(row.mod.name)

@@ -418,7 +418,7 @@ function PassiveSpecClass:DecodePoePlannerURL(url, return_tree_version_only)
 	   -- both error messages begin with 'Invalid'
 	---@param bytes string
 	---@param start integer
-	---@return integer
+	---@return number
 	local function byteToInt(bytes, start)
 		-- get a little endian number from two bytes
 		return bytes:byte(start) + bytes:byte(start + 1) * 256
@@ -519,7 +519,7 @@ end
 
 -- Decode the given GGG passive tree URL
 ---@param url string
----@return boolean?
+---@return string?
 function PassiveSpecClass:DecodeURL(url)
 	local b = common.base64.decode(url:gsub("^.+/",""):gsub("-","+"):gsub("_","/"))
 	if not b or #b < 6 then
@@ -934,7 +934,7 @@ end
 ---@param node Node
 ---@param visited Node[]
 ---@param noAscend? boolean
----@return Node?
+---@return boolean?
 function PassiveSpecClass:FindStartFromNode(node, visited, noAscend)
 	-- Mark the current node as visited so we don't go around in circles
 	node.visited = true
@@ -1039,7 +1039,7 @@ end
 -- Determine the shortest path from the given node to the class' start
 -- Only allocated nodes can be traversed
 ---@param rootId integer
----@return Node[]?
+---@return table<integer, boolean>?
 function PassiveSpecClass:GetShortestPathToClassStart(rootId)
 	local root = self.nodes[rootId]
 	if not root or not root.alloc then
@@ -2013,7 +2013,7 @@ end
 ---@param srcOidx integer
 ---@param srcNodesPerOrbit integer
 ---@param destNodesPerOrbit integer
----@return integer
+---@return integer?
 function PassiveSpecClass:TranslateClusterOrbitIndex(srcOidx, srcNodesPerOrbit, destNodesPerOrbit)
 	if srcNodesPerOrbit == destNodesPerOrbit then
 		return srcOidx
