@@ -78,7 +78,8 @@
       "**/Data/Spectres.lua",
       "**/Data/TattooPassives.lua",
       "**/Data/TradeSiteStats.lua",
-      "**/Export/**"
+      "**/Export/**",
+      "**/sha2.lua"
     ]
   }
 }
